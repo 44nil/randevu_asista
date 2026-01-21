@@ -1,0 +1,118 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Plus, Edit, Trash2, Shield, User } from "lucide-react"
+import { getStaffList, deleteStaff } from "@/app/staff-actions"
+import { StaffDialog } from "./staff-dialog"
+import { toast } from "sonner"
+
+export function StaffList() {
+    const [staff, setStaff] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+    const [dialogOpen, setDialogOpen] = useState(false)
+    const [editingStaff, setEditingStaff] = useState<any>(null)
+
+    const loadStaff = async () => {
+        setLoading(true)
+        const res = await getStaffList()
+        if (res.success) {
+            setStaff(res.data || [])
+        }
+        setLoading(false)
+    }
+
+    useEffect(() => {
+        loadStaff()
+    }, [])
+
+    const handleEdit = (s: any) => {
+        setEditingStaff(s)
+        setDialogOpen(true)
+    }
+
+    const handleCreate = () => {
+        setEditingStaff(null)
+        setDialogOpen(true)
+    }
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("Eğitmeni silmek istediğinizden emin misiniz?")) return
+        const res = await deleteStaff(id)
+        if (res.success) {
+            toast.success("Eğitmen silindi")
+            loadStaff()
+        } else {
+            toast.error("Hata", { description: res.error })
+        }
+    }
+
+    return (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle>Ekip Yönetimi</CardTitle>
+                    <CardDescription>Eğitmenleri ve yöneticileri buradan yönetebilirsiniz.</CardDescription>
+                </div>
+                <Button onClick={handleCreate} size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Eğitmen Ekle
+                </Button>
+            </CardHeader>
+            <CardContent>
+                {loading ? (
+                    <div className="text-center py-4 text-slate-500">Yükleniyor...</div>
+                ) : (
+                    <div className="space-y-4">
+                        {staff.map((s) => (
+                            <div key={s.id} className="flex items-center justify-between p-4 border rounded-lg bg-slate-50/50 hover:bg-white transition-colors">
+                                <div className="flex items-center gap-4">
+                                    <Avatar>
+                                        <AvatarFallback>{s.full_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <div className="font-medium text-slate-900">{s.full_name}</div>
+                                        <div className="text-xs text-slate-500">{s.email}</div>
+                                    </div>
+                                    <Badge variant={s.role === 'owner' ? 'default' : s.role === 'admin' ? 'secondary' : 'outline'}>
+                                        {s.role === 'owner' ? 'Kurucu' : s.role === 'admin' ? 'Yönetici' : 'Eğitmen'}
+                                    </Badge>
+                                    {s.clerk_id.startsWith('pending_') && (
+                                        <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">
+                                            Beklemede
+                                        </Badge>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500" onClick={() => handleEdit(s)}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                    {s.role !== 'owner' && (
+                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(s.id)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        {staff.length === 0 && (
+                            <div className="text-center py-8 text-slate-500">
+                                Henüz ekip üyesi eklenmemiş.
+                            </div>
+                        )}
+                    </div>
+                )}
+            </CardContent>
+
+            <StaffDialog
+                staff={editingStaff}
+                open={dialogOpen}
+                onOpenChange={setDialogOpen}
+                onSuccess={loadStaff}
+            />
+        </Card>
+    )
+}
