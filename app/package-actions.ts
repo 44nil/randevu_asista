@@ -1,18 +1,72 @@
-'use server'
+"use server"
 
-import { getSession } from "@/app/actions";
-import { revalidatePath } from "next/cache";
+import { revalidatePath } from "next/cache"
+import { getSession } from "./actions"
 
-// --- Packages Actions ---
+// ============================================================================
+// PACKAGE DEFINITIONS
+// ============================================================================
 
-export async function getPackages() {
+export async function createPackage(data: {
+    name: string,
+    description?: string,
+    price: number,
+    credits: number,
+    validity_days?: number
+}) {
     const { userId } = await getSession();
-    if (!userId) return { success: false, data: [], error: "Unauthorized" };
+    if (!userId) return { success: false, error: "Unauthorized" };
 
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+
+    // Get org id
+    const { data: userData } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('clerk_id', userId)
+        .single();
+
+    if (!userData?.organization_id) {
+        return { success: false, error: "No organization found" };
+    }
+
+    const { data: pkg, error } = await supabase
+        .from('packages')
+        .insert({
+            organization_id: userData.organization_id,
+            name: data.name,
+            description: data.description,
+            price: data.price,
+            credits: data.credits,
+            sessions: data.credits, // Legacy support
+            validity_days: data.validity_days
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Create package error:", error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin/packages');
+    return { success: true, data: pkg };
+}
+
+export async function getPackages() {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
     const { data: userData } = await supabase
@@ -21,7 +75,7 @@ export async function getPackages() {
         .eq('clerk_id', userId)
         .single();
 
-    if (!userData?.organization_id) return { success: false, data: [], error: "No organization found" };
+    if (!userData?.organization_id) return { success: false, data: [] };
 
     const { data, error } = await supabase
         .from('packages')
@@ -31,154 +85,93 @@ export async function getPackages() {
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error(error);
-        return { success: false, data: [], error: error.message };
-    }
-
-    return { success: true, data: data || [] };
-}
-
-export async function createPackage(data: { name: string, price: number, sessions: number, type: string, duration_days?: number }) {
-    const { userId } = await getSession();
-    if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    const { data: userData } = await supabase
-        .from('users')
-        .select('organization_id')
-        .eq('clerk_id', userId)
-        .single();
-
-    if (!userData?.organization_id) return { success: false, error: "No organization found" };
-
-    const { error } = await supabase.from('packages').insert({
-        organization_id: userData.organization_id,
-        name: data.name,
-        price: data.price,
-        sessions: data.sessions,
-        type: data.type,
-        duration_days: data.duration_days || 30
-    });
-
-    if (error) {
-        console.error(error);
         return { success: false, error: error.message };
     }
 
-    revalidatePath('/packages');
-    return { success: true };
+    return { success: true, data };
 }
 
-export async function deletePackage(id: string) {
+// ============================================================================
+// PACKAGE SALES & STATS
+// ============================================================================
+
+export async function sellPackage(customerId: string, packageId: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Soft delete
-    const { error } = await supabase
+    // Get package details
+    const { data: pkg, error: pkgError } = await supabase
         .from('packages')
-        .update({ active: false })
-        .eq('id', id);
+        .select('*')
+        .eq('id', packageId)
+        .single();
 
-    if (error) {
-        console.error(error);
-        return { success: false, error: error.message };
+    if (pkgError || !pkg) return { success: false, error: "Package not found" };
+
+    // Calculate expiry
+    let expiryDate = null;
+    if (pkg.validity_days) {
+        const date = new Date();
+        date.setDate(date.getDate() + pkg.validity_days);
+        expiryDate = date.toISOString();
     }
 
-    revalidatePath('/packages');
+    const { error: saleError } = await supabase
+        .from('customer_packages')
+        .insert({
+            organization_id: pkg.organization_id, // Same org
+            customer_id: customerId,
+            package_id: pkg.id,
+            package_name: pkg.name,
+            initial_credits: pkg.credits,
+            remaining_credits: pkg.credits,
+            price_paid: pkg.price,
+            expiry_date: expiryDate,
+            status: 'active'
+        });
+
+    if (saleError) {
+        console.error("Sell package error:", saleError);
+        return { success: false, error: saleError.message };
+    }
+
+    revalidatePath(`/customers/${customerId}`);
+    revalidatePath('/packages'); // Refresh admin list
     return { success: true };
 }
 
-// --- Sales Actions ---
-
-export async function getRecentSales() {
+export async function getCustomerActivePackages(customerId: string) {
     const { userId } = await getSession();
-    if (!userId) return { success: false, data: [], error: "Unauthorized" };
+    if (!userId) return { success: false, error: "Unauthorized" };
 
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
     );
-
-    const { data: userData } = await supabase
-        .from('users')
-        .select('organization_id')
-        .eq('clerk_id', userId)
-        .single();
-
-    if (!userData?.organization_id) return { success: false, data: [], error: "No organization found" };
 
     const { data, error } = await supabase
-        .from('sales')
-        .select(`
-            id,
-            amount,
-            sale_date,
-            customer:customers(name, metadata),
-            package:packages(name, sessions, type)
-        `)
-        .eq('organization_id', userData.organization_id)
-        .order('sale_date', { ascending: false })
-        .limit(10); // Last 10 sales
+        .from('customer_packages')
+        .select('*')
+        .eq('customer_id', customerId)
+        .eq('status', 'active')
+        .gt('remaining_credits', 0) // Must have credits
+        .or(`expiry_date.is.null,expiry_date.gt.${new Date().toISOString()}`) // Not expired
+        .order('expiry_date', { ascending: true }); // Use oldest expiring first
 
     if (error) {
-        console.error(error);
-        return { success: false, data: [], error: error.message };
-    }
-
-    return { success: true, data: data || [] };
-}
-
-export async function createSale(data: { customer_id: string, package_id: string, amount: number, payment_method: string }) {
-    const { userId } = await getSession();
-    if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    const { data: userData } = await supabase
-        .from('users')
-        .select('organization_id')
-        .eq('clerk_id', userId)
-        .single();
-
-    if (!userData?.organization_id) return { success: false, error: "No organization found" };
-
-    const { error } = await supabase.from('sales').insert({
-        organization_id: userData.organization_id,
-        customer_id: data.customer_id,
-        package_id: data.package_id,
-        amount: data.amount,
-        // payment_method: data.payment_method // Need to ensure column exists or metadata field is used?
-        // Let's assume metadata for now if column doesn't exist, OR check schema.
-        // Checking schema: sales table has 'amount', 'sale_date', 'customer_id', 'package_id'.
-        // No payment_method column yet. Maybe I should adding it?
-        // I'll stick to basic schema for MVP, or add it.
-        // Let's assume we might need to add it later. For now, we skip saving payment method explicitly or use metadata if sales table supports it.
-        // Actually, schema doesn't have metadata on sales. I'll just save the core info.
-    });
-
-    if (error) {
-        console.error(error);
         return { success: false, error: error.message };
     }
 
-    revalidatePath('/packages');
-    return { success: true };
+    return { success: true, data };
 }
 
 export async function getPackagePageStats() {
@@ -188,7 +181,8 @@ export async function getPackagePageStats() {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
     const { data: userData } = await supabase
@@ -197,30 +191,145 @@ export async function getPackagePageStats() {
         .eq('clerk_id', userId)
         .single();
 
-    const orgId = userData?.organization_id;
-    if (!orgId) return { success: false, error: "No org" };
+    if (!userData?.organization_id) return { success: false, data: {} };
 
-    // 1. Total Revenue (This Month)
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const { data: monthlySales } = await supabase
-        .from('sales')
-        .select('amount, package_id')
-        .eq('organization_id', orgId)
-        .gte('sale_date', startOfMonth);
+    // Get all sales for this org
+    const { data: sales, error } = await supabase
+        .from('customer_packages')
+        .select('price_paid, created_at, package_name, status')
+        .eq('organization_id', userData.organization_id);
 
-    const revenue = monthlySales?.reduce((sum, s) => sum + Number(s.amount), 0) || 0;
-    const soldCount = monthlySales?.length || 0;
+    if (error) return { success: false, error: error.message };
 
-    // 2. Total active members/packages
-    // This is tricky without complex query. Mock or simple count.
+    // Calculate stats
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    let monthlyRevenue = 0;
+    let soldPackagesCount = sales.length;
+    let packageCounts: Record<string, number> = {};
+
+    sales.forEach(sale => {
+        const saleDate = new Date(sale.created_at);
+        if (saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
+            monthlyRevenue += Number(sale.price_paid || 0);
+        }
+
+        const pkgName = sale.package_name || "Bilinmiyor";
+        packageCounts[pkgName] = (packageCounts[pkgName] || 0) + 1;
+    });
+
+    // Active members (approximate by active packages)
+    const { count: activeCount } = await supabase
+        .from('customer_packages')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', userData.organization_id)
+        .eq('status', 'active');
+
+    // Top package
+    let topPackage = "-";
+    let maxCount = 0;
+    Object.entries(packageCounts).forEach(([name, count]) => {
+        if (count > maxCount) {
+            maxCount = count;
+            topPackage = name;
+        }
+    });
 
     return {
         success: true,
         data: {
-            monthlyRevenue: revenue,
-            soldPackagesCount: soldCount,
-            activeMembers: 86, // Demo value till better tracking
-            topPackage: "Özel Ders (10 Seans)" // Demo value
+            monthlyRevenue,
+            soldPackagesCount,
+            activeMembers: activeCount || 0,
+            topPackage
         }
+    };
+}
+
+export async function getRecentSales() {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+
+    const { data: userData } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('clerk_id', userId)
+        .single();
+
+    if (!userData?.organization_id) return { success: false, data: [] };
+
+    const { data, error } = await supabase
+        .from('customer_packages')
+        .select(`
+            id,
+            price_paid,
+            created_at,
+            package_name,
+            customer:customer_id (name, email)
+        `)
+        .eq('organization_id', userData.organization_id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+    if (error) return { success: false, error: error.message };
+
+    // Flatten customer data
+    const formatted = data.map(item => {
+        const customer = Array.isArray(item.customer) ? item.customer[0] : item.customer;
+        return {
+            id: item.id,
+            customerName: customer?.name || "Bilinmiyor",
+            customerEmail: customer?.email,
+            packageName: item.package_name,
+            price: item.price_paid,
+            date: item.created_at
+        };
+    });
+
+    return { success: true, data: formatted };
+}
+
+export async function deletePackage(packageId: string) {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+
+    const { data: userData } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('clerk_id', userId)
+        .single();
+
+    if (!userData?.organization_id) {
+        return { success: false, error: "No organization found" };
     }
+
+    const { error } = await supabase
+        .from('packages')
+        .update({ active: false })
+        .eq('id', packageId)
+        .eq('organization_id', userData.organization_id);
+
+    if (error) {
+        console.error("Delete package error:", error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/packages');
+    return { success: true };
 }

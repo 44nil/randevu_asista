@@ -7,9 +7,10 @@ import { BarChart3 } from "lucide-react"
 
 interface PackageStatusProps {
     pkg: any // Active Package Data
+    lastUsage?: any[] // Recent usage history
 }
 
-export function PackageStatus({ pkg }: PackageStatusProps) {
+export function PackageStatus({ pkg, lastUsage = [] }: PackageStatusProps) {
     if (!pkg) {
         return (
             <Card className="h-full border-dashed">
@@ -21,10 +22,14 @@ export function PackageStatus({ pkg }: PackageStatusProps) {
         )
     }
 
-    const totalSessions = pkg.sessions
-    const usedSessions = pkg.usedSessions || 0
-    const remainingSessions = totalSessions - usedSessions
+    const totalSessions = pkg.totalCredits || 1
+    const remainingSessions = pkg.remainingCredits || 0
+    const usedSessions = totalSessions - remainingSessions
     const progress = (usedSessions / totalSessions) * 100
+
+    // Format Expiry Date
+    const expiryDate = pkg.expiryDate ? new Date(pkg.expiryDate) : null
+    const formattedDate = expiryDate ? expiryDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : "Süresiz"
 
     return (
         <Card className="border-none shadow-sm bg-white h-full relative overflow-hidden group">
@@ -35,19 +40,23 @@ export function PackageStatus({ pkg }: PackageStatusProps) {
                     </div>
                     <CardTitle className="text-base font-bold text-slate-900">Aktif Paket Durumu</CardTitle>
                 </div>
-                <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-                    Yenilenme: {new Date(new Date().setDate(new Date().getDate() + pkg.duration_days)).toLocaleDateString('tr-TR')}
-                </Badge>
+                {expiryDate && (
+                    <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+                        Son Kul: {formattedDate}
+                    </Badge>
+                )}
             </CardHeader>
             <CardContent className="space-y-6">
                 <div>
                     <h3 className="text-lg font-bold text-slate-900">{pkg.name}</h3>
-                    <p className="text-sm text-slate-500">Aletli Pilates - Başlangıç Seviyesi</p>
+                    <p className="text-sm text-slate-500">
+                        {remainingSessions === 0 ? "Paketiniz doldu" : "Kullanıma açık"}
+                    </p>
                 </div>
 
                 <div className="space-y-2">
                     <div className="flex justify-between items-end">
-                        <span className="text-sm font-medium text-slate-600">Kullanım</span>
+                        <span className="text-sm font-medium text-slate-600">Kullanılan</span>
                         <div className="flex items-baseline gap-1">
                             <span className="text-2xl font-bold text-blue-600">{usedSessions}</span>
                             <span className="text-sm text-slate-400">/{totalSessions}</span>
@@ -56,10 +65,35 @@ export function PackageStatus({ pkg }: PackageStatusProps) {
                     <Progress value={progress} className="h-2 bg-slate-100" indicatorClassName="bg-blue-600" />
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                <div className="flex items-center gap-2 text-xs text-slate-500 font-medium pb-2 border-b border-slate-50">
                     <span className="inline-block w-4 h-4 rounded-full bg-blue-100/50 text-blue-600 flex items-center justify-center text-[10px] font-bold">i</span>
-                    {usedSessions} seans kullanıldı, {remainingSessions} seans kaldı.
+                    {remainingSessions} ders hakkınız kaldı.
                 </div>
+
+                {/* Recent Usage Display */}
+                {lastUsage && lastUsage.length > 0 && (
+                    <div className="space-y-3 pt-1">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Son Kullanımlar</p>
+                        <div className="space-y-2">
+                            {lastUsage.map((usage: any) => (
+                                <div key={usage.id} className="flex justify-between items-center text-sm">
+                                    <div className="flex flex-col">
+                                        <span className="text-slate-700 font-medium">
+                                            {new Date(usage.start_time).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                        </span>
+                                        <span className="text-[10px] text-slate-400">{usage.service_id}</span>
+                                    </div>
+                                    <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded flex items-center gap-1">
+                                        -1 Ders
+                                        {usage.status === 'confirmed' && (
+                                            <span className="text-[9px] bg-blue-100 text-blue-600 px-1 rounded-sm ml-1">PLANLI</span>
+                                        )}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </CardContent>
         </Card>
     )

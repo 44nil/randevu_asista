@@ -9,17 +9,11 @@ import { CreditCard, Wallet } from "lucide-react"
 
 interface Sale {
     id: string
-    amount: number
-    sale_date: string
-    customer: {
-        name: string
-        metadata?: any
-    }
-    package: {
-        name: string
-        sessions: number
-        type: string
-    }
+    price: number
+    date: string
+    customerName: string
+    customerEmail?: string
+    packageName: string
 }
 
 interface RecentSalesProps {
@@ -55,18 +49,18 @@ export function RecentSales({ data }: RecentSalesProps) {
                         <div key={sale.id} className="grid grid-cols-4 items-center">
                             <div className="flex items-center gap-3">
                                 <Avatar className="h-8 w-8 bg-blue-50 text-blue-600 border">
-                                    <AvatarFallback>{sale.customer.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                    <AvatarFallback>{sale.customerName.substring(0, 2).toUpperCase()}</AvatarFallback>
                                 </Avatar>
-                                <span className="text-sm font-medium text-slate-900">{sale.customer.name}</span>
+                                <span className="text-sm font-medium text-slate-900">{sale.customerName}</span>
                             </div>
                             <div className="text-sm text-slate-600">
-                                {sale.package?.name || "Bilinmeyen Paket"}
+                                {sale.packageName || "Bilinmeyen Paket"}
                             </div>
                             <div className="text-sm text-slate-500">
-                                {format(new Date(sale.sale_date), "d MMM yyyy", { locale: tr })}
+                                {format(new Date(sale.date), "d MMM yyyy", { locale: tr })}
                             </div>
                             <div className="text-right font-bold text-slate-900">
-                                {formatCurrency(sale.amount)}
+                                {formatCurrency(sale.price)}
                             </div>
                         </div>
                     ))

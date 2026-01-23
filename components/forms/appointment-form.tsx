@@ -22,13 +22,13 @@ import { Switch } from "@/components/ui/switch"
 
 const appointmentFormSchema = z.object({
     title: z.string().min(2, "Ders adı en az 2 karakter olmalıdır"),
-    customer_ids: z.array(z.string()).min(1, "En az 1 kişi seçiniz"),
+    customer_ids: z.array(z.string()), // Optional - can be empty
     appointment_date: z.date(),
     time: z.string().min(1, "Saat seçiniz"),
     duration: z.string(),
     type: z.enum(["reformer", "mat", "private"]),
     max_attendees: z.string(),
-    is_recurring: z.boolean().default(false),
+    is_recurring: z.boolean(),
     recurring_weeks: z.string().optional()
 })
 
@@ -42,6 +42,12 @@ interface AppointmentFormProps {
 export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps) {
     const [customers, setCustomers] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
+    const [mounted, setMounted] = useState(false)
+
+    // Track when component is mounted on client side
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     // Load customers for selection
     useEffect(() => {
@@ -85,10 +91,20 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
         setLoading(true)
 
         try {
-            // Combine date and time
+            // Combine date and time - properly handle timezone
             const [hours, minutes] = data.time.split(':').map(Number)
-            const startDateTime = new Date(data.appointment_date)
-            startDateTime.setHours(hours, minutes)
+
+            // Create date in local timezone
+            const selectedDate = new Date(data.appointment_date)
+            const startDateTime = new Date(
+                selectedDate.getFullYear(),
+                selectedDate.getMonth(),
+                selectedDate.getDate(),
+                hours,
+                minutes,
+                0,
+                0
+            )
 
             console.log('🕐 Calling createClassSession with:', {
                 customer_ids: data.customer_ids,
@@ -205,7 +221,7 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                                 )
                             })}
                             {selectedCustomerIds.length === 0 && (
-                                <p className="text-xs text-slate-400 italic">Henüz kimse seçilmedi.</p>
+                                <p className="text-xs text-slate-400 italic">Katılımcı eklemeden ders oluşturabilirsiniz. Müşteriler rezervasyon yapabilir.</p>
                             )}
                         </div>
                         <FormMessage>{form.formState.errors.customer_ids?.message}</FormMessage>
@@ -229,7 +245,7 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                             >
-                                                {field.value ? (
+                                                {mounted && field.value ? (
                                                     format(field.value, "PPP", { locale: tr })
                                                 ) : (
                                                     <span>Tarih seçin</span>

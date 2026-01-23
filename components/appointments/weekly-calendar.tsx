@@ -1,33 +1,36 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { format, addDays, startOfWeek, endOfWeek, isSameDay, isSameMonth, addMonths, subMonths, subWeeks, addWeeks, startOfDay } from "date-fns"
+import { format, addDays, startOfWeek, endOfWeek, isSameDay, subWeeks, addWeeks } from "date-fns"
 import { tr } from "date-fns/locale"
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Users, CheckCircle, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
+import { cn, parseUTCTime } from "@/lib/utils"
 import { getDashboardStats } from "@/app/stats-actions"
 import { getAppointments } from "@/app/appointment-actions"
+import { getWaitlist, removeFromWaitlist, promoteFromWaitlist } from "@/app/waitlist-actions"
+import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 // Types
 type ViewType = "week" | "day" | "list"
 type ClassType = "reformer" | "mat" | "private"
 
 interface Appointment {
-    id: string // if grouped, this might be the ID of the first one or a generated ID
+    id: string
     title: string
-    instructor: string // This will now hold "Ahmet, Mehmet..." or "3 Kişi"
-    participants: string[] // List of names
+    instructor: string
+    participants: string[]
     type: ClassType
     startTime: Date
     duration: number // minutes
     attendees: number
     maxAttendees: number
     status: "scheduled" | "completed" | "cancelled" | "confirmed"
-    rawAppointments: any[] // Keep raw data for details
+    rawAppointments: any[]
 }
 
 export function WeeklyCalendar() {
@@ -42,9 +45,27 @@ export function WeeklyCalendar() {
     const [loading, setLoading] = useState(false)
     const [view, setView] = useState<ViewType>("week")
 
+    // Waitlist State
+    const [waitlist, setWaitlist] = useState<any[]>([])
+    const [loadingWaitlist, setLoadingWaitlist] = useState(false)
+
     // Dialog State
     const [selectedSlot, setSelectedSlot] = useState<Appointment | null>(null)
     const [detailOpen, setDetailOpen] = useState(false)
+
+    // Fetch waitlist when dialog opens
+    useEffect(() => {
+        if (selectedSlot && detailOpen) {
+            setLoadingWaitlist(true)
+            getWaitlist(selectedSlot.id)
+                .then(res => {
+                    if (res.success) {
+                        setWaitlist(res.data || [])
+                    }
+                })
+                .finally(() => setLoadingWaitlist(false))
+        }
+    }, [selectedSlot, detailOpen])
 
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
     const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 })
@@ -52,7 +73,7 @@ export function WeeklyCalendar() {
     useEffect(() => {
         setLoading(true)
 
-        // Fetch Appointments
+        // Fetch Appointments (Now returns class_sessions)
         const fetchAppointments = getAppointments(weekStart.toISOString(), weekEnd.toISOString())
         // Fetch Stats (Global)
         const fetchStats = getDashboardStats()
@@ -60,57 +81,53 @@ export function WeeklyCalendar() {
         Promise.all([fetchAppointments, fetchStats])
             .then(([resApts, resStats]) => {
                 if (resApts.success && resApts.data) {
-
-                    // GROUPING LOGIC
                     const rawData = resApts.data
-                    const grouped: Appointment[] = []
 
-                    // Simple grouping by start_time + service_id
-                    const groups: Record<string, any[]> = {}
-
-                    rawData.forEach((apt: any) => {
-                        const key = `${apt.start_time}-${apt.service_id}`
-                        if (!groups[key]) groups[key] = []
-                        groups[key].push(apt)
-                    })
-
-                    Object.values(groups).forEach(group => {
-                        const first = group[0]
+                    // Map class_sessions to Appointment interface
+                    const processedAppointments: Appointment[] = rawData.map((session: any) => {
                         let type: ClassType = 'private'
-                        if (first.service_id?.toLowerCase().includes('reformer')) type = 'reformer'
-                        else if (first.service_id?.toLowerCase().includes('mat')) type = 'mat'
+                        if (session.service_id?.toLowerCase().includes('reformer')) type = 'reformer'
+                        else if (session.service_id?.toLowerCase().includes('mat')) type = 'mat'
 
-                        const participantNames = group.map((g: any) => g.customer?.name || "Bilinmiyor")
+                        // Extract participants from nested appointments
+                        const activeAppointments = session.appointments?.filter((a: any) => a.status !== 'cancelled') || []
+                        const participantNames = activeAppointments.map((a: any) => a.customer?.name || "Bilinmiyor")
 
-                        // Formatted label
-                        let instructorLabel = participantNames[0]
-                        if (participantNames.length > 1) {
-                            instructorLabel = `${participantNames.length} Kişi`
+                        // Instructor Label
+                        let instructorLabel = session.staff?.full_name || "Eğitmen Yok"
+
+                        // Helper for Turkish Titles
+                        const getTurkishTitle = (id: string) => {
+                            const map: Record<string, string> = {
+                                'private': 'ÖZEL DERS',
+                                'reformer': 'ALETLİ PİLATES',
+                                'mat': 'MAT PİLATES'
+                            }
+                            return map[id?.toLowerCase()] || id?.toUpperCase() || 'DERS'
                         }
 
-                        grouped.push({
-                            id: first.id, // ID of the first one
-                            title: first.service_id ? first.service_id.toUpperCase() : "Ders",
+                        return {
+                            id: session.id,
+                            title: getTurkishTitle(session.service_id),
                             instructor: instructorLabel,
                             participants: participantNames,
                             type: type,
-                            startTime: new Date(first.start_time),
-                            duration: (new Date(first.end_time).getTime() - new Date(first.start_time).getTime()) / 60000,
-                            attendees: group.length,
-                            maxAttendees: 10, // Mock max
-                            status: first.status,
-                            rawAppointments: group
-                        })
+                            startTime: parseUTCTime(session.start_time),
+                            duration: (parseUTCTime(session.end_time).getTime() - parseUTCTime(session.start_time).getTime()) / 60000,
+                            attendees: activeAppointments.length,
+                            maxAttendees: session.capacity || 1,
+                            status: 'confirmed',
+                            rawAppointments: session.appointments
+                        }
                     })
 
-                    setAppointments(grouped)
+                    setAppointments(processedAppointments)
 
                     // Stats logic
-                    const total = grouped.length
-                    const completed = grouped.filter(a => a.status === 'completed' || a.status === 'confirmed').length
-                    const hoursBooked = grouped.reduce((acc, curr) => acc + (curr.duration / 60), 0)
+                    const total = processedAppointments.length
+                    const completed = processedAppointments.filter(a => a.startTime < new Date()).length
+                    const hoursBooked = processedAppointments.reduce((acc, curr) => acc + (curr.duration / 60), 0)
                     const totalSlots = 14 * 7
-                    // ... (simplified stats logic)
 
                     setStats(prev => ({
                         ...prev,
@@ -121,7 +138,7 @@ export function WeeklyCalendar() {
                 }
 
                 if (resStats.success && resStats.data) {
-                    setStats(prev => ({ ...prev, totalMembers: resStats.data.totalMembers }))
+                    setStats(prev => ({ ...prev, totalMembers: resStats.data.stats.totalMembers }))
                 }
             })
             .finally(() => setLoading(false))
@@ -133,6 +150,33 @@ export function WeeklyCalendar() {
 
     // Navigation handlers
     const prevWeek = () => setCurrentDate(subWeeks(currentDate, 1))
+
+    const handlePromoteFromWaitlist = async (sessionId: string) => {
+        const promise = promoteFromWaitlist(sessionId)
+
+        toast.promise(promise, {
+            loading: 'Bekleme listesinden alınıyor...',
+            success: (data) => {
+                getWaitlist(sessionId).then(res => res.success && setWaitlist(res.data || []))
+                setCurrentDate(new Date(currentDate)) // Force refresh
+                return 'Kişi derse alındı!'
+            },
+            error: (err) => `Hata: ${err}`
+        })
+    }
+
+    const handleRemoveFromWaitlist = async (waitlistId: string, sessionId: string) => {
+        const promise = removeFromWaitlist(waitlistId)
+
+        toast.promise(promise, {
+            loading: 'Listeden çıkarılıyor...',
+            success: () => {
+                getWaitlist(sessionId).then(res => res.success && setWaitlist(res.data || []))
+                return 'Kişi bekleme listesinden çıkarıldı'
+            },
+            error: 'İşlem başarısız'
+        })
+    }
     const nextWeek = () => setCurrentDate(addWeeks(currentDate, 1))
     const goToToday = () => setCurrentDate(new Date())
 
@@ -144,7 +188,7 @@ export function WeeklyCalendar() {
 
     const getTypeStyles = (type: ClassType) => {
         switch (type) {
-            case "reformer": return "bg-purple-100 border-l-4 border-purple-500 text-purple-900" // Darker for readability
+            case "reformer": return "bg-purple-100 border-l-4 border-purple-500 text-purple-900"
             case "mat": return "bg-blue-100 border-l-4 border-blue-500 text-blue-900"
             case "private": return "bg-orange-100 border-l-4 border-orange-500 text-orange-900"
             default: return "bg-gray-50 border-gray-500"
@@ -214,17 +258,12 @@ export function WeeklyCalendar() {
                                                     setDetailOpen(true)
                                                 }}
                                             >
-                                                <div className="font-bold uppercase opacity-70 text-[10px] truncate">{apt.title}</div>
                                                 <div className="font-bold text-slate-900 leading-tight truncate mt-0.5">
-                                                    {apt.participants.length > 2
-                                                        ? `${apt.participants.length} Katılımcı`
-                                                        : apt.participants.join(", ")}
+                                                    {apt.instructor}
                                                 </div>
-                                                {apt.participants.length > 2 && (
-                                                    <div className="text-[10px] mt-1 opacity-80 truncate">
-                                                        {apt.participants[0]} +{apt.participants.length - 1} diğer
-                                                    </div>
-                                                )}
+                                                <div className="text-[10px] mt-1 opacity-80 truncate">
+                                                    {apt.participants.length} / {apt.maxAttendees} Kişi
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -258,30 +297,91 @@ export function WeeklyCalendar() {
                                 </div>
                             </div>
 
-                            <div>
-                                <h4 className="text-sm font-medium mb-2 text-slate-700">Katılımcı Listesi</h4>
-                                <div className="border rounded-lg divide-y">
-                                    {selectedSlot.participants.map((name, i) => (
-                                        <div key={i} className="p-3 flex items-center justify-between hover:bg-slate-50">
-                                            <span className="text-sm font-medium">{name}</span>
-                                            <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
-                                                Onaylı
-                                            </Badge>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                            <Tabs defaultValue="participants" className="w-full">
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="participants">Katılımcılar ({selectedSlot.participants.length})</TabsTrigger>
+                                    <TabsTrigger value="waitlist">Bekleme Listesi ({waitlist?.length || 0})</TabsTrigger>
+                                </TabsList>
 
-                            <div className="pt-2 flex justify-end gap-2">
+                                <TabsContent value="participants" className="mt-4">
+                                    <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
+                                        {selectedSlot.participants.length > 0 ? (
+                                            selectedSlot.participants.map((name, i) => (
+                                                <div key={i} className="p-3 flex items-center justify-between hover:bg-slate-50">
+                                                    <span className="text-sm font-medium">{name}</span>
+                                                    <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
+                                                        Onaylı
+                                                    </Badge>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="p-4 text-center text-sm text-slate-500">
+                                                Henüz katılımcı yok
+                                            </div>
+                                        )}
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="waitlist" className="mt-4">
+                                    <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
+                                        {loadingWaitlist ? (
+                                            <div className="p-4 text-center text-sm text-slate-500">Yükleniyor...</div>
+                                        ) : waitlist && waitlist.length > 0 ? (
+                                            waitlist.map((entry, i) => (
+                                                <div key={entry.id} className="p-3 flex items-center justify-between hover:bg-slate-50 group">
+                                                    <div className="flex items-center gap-3">
+                                                        <Badge variant="secondary" className="w-6 h-6 flex items-center justify-center rounded-full p-0">
+                                                            {entry.position}
+                                                        </Badge>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-medium">{entry.customer?.name || "İsimsiz"}</span>
+                                                            <span className="text-[10px] text-slate-400">
+                                                                {format(new Date(entry.created_at), 'd MMM HH:mm', { locale: tr })}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        {i === 0 && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="default"
+                                                                className="h-7 text-[10px] bg-green-600 hover:bg-green-700"
+                                                                onClick={() => handlePromoteFromWaitlist(selectedSlot.id)}
+                                                                disabled={selectedSlot.attendees >= selectedSlot.maxAttendees}
+                                                            >
+                                                                Derse Al
+                                                            </Button>
+                                                        )}
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-7 text-[10px] text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                            onClick={() => handleRemoveFromWaitlist(entry.id, selectedSlot.id)}
+                                                        >
+                                                            Çıkar
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="p-4 text-center text-sm text-slate-500">
+                                                Bekleme listesi boş
+                                            </div>
+                                        )}
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
+
+                            <div className="pt-2 flex justify-between items-center text-xs text-slate-400">
+                                <span>Eğitmen: {selectedSlot.instructor}</span>
                                 <Button variant="outline" onClick={() => setDetailOpen(false)}>Kapat</Button>
-                                {/* Add Edit/Delete actions here if needed */}
                             </div>
                         </div>
                     )}
                 </DialogContent>
             </Dialog>
 
-            {/* Bottom Stats & FAB ... */}
+            {/* Bottom Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card>
                     <CardContent className="flex items-center gap-4 p-6">
@@ -322,10 +422,7 @@ export function WeeklyCalendar() {
                 </Card>
             </div>
 
-            {/* Floating Action Button */}
-            <Button className="fixed bottom-8 right-8 h-14 w-14 rounded-full shadow-xl bg-blue-600 hover:bg-blue-700 text-white z-50">
-                <Plus className="h-6 w-6" />
-            </Button>
+            {/* FAB is handled in ProgramClient now */}
         </div>
     )
 }

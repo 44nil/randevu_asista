@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getPackages, createSale } from "@/app/package-actions"
+import { getPackages, sellPackage } from "@/app/package-actions"
 import { toast } from "sonner"
 import { Loader2, CreditCard } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
@@ -43,12 +43,7 @@ export function PackageSaleDialog({ customer, open, onOpenChange, onSuccess }: P
         if (!selectedPkg) return
 
         try {
-            const result = await createSale({
-                customer_id: customer.id,
-                package_id: selectedPackageId,
-                amount: selectedPkg.price,
-                payment_method: 'credit_card' // Default or add selector later
-            })
+            const result = await sellPackage(customer.id, selectedPackageId)
 
             if (result.success) {
                 toast.success("Paket satışı başarıyla gerçekleşti")
@@ -92,7 +87,7 @@ export function PackageSaleDialog({ customer, open, onOpenChange, onSuccess }: P
                                 ) : (
                                     packages.map((pkg) => (
                                         <SelectItem key={pkg.id} value={pkg.id}>
-                                            {pkg.name} ({pkg.sessions} Ders)
+                                            {pkg.name} ({pkg.credits} Ders)
                                         </SelectItem>
                                     ))
                                 )}

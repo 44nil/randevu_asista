@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Calendar, History, User, LogOut, Settings } from "lucide-react"
+import { LayoutDashboard, Calendar, History, User, LogOut, Settings, TrendingUp } from "lucide-react"
 import { SignOutButton } from "@clerk/nextjs"
 
 export function CustomerLayout({ children }: { children: React.ReactNode }) {
@@ -13,6 +13,7 @@ export function CustomerLayout({ children }: { children: React.ReactNode }) {
         { href: "/", label: "Kontrol Paneli", icon: LayoutDashboard },
         { href: "/reservations", label: "Rezervasyon", icon: Calendar },
         { href: "/history", label: "Derslerim", icon: History },
+        { href: "/progress", label: "Gelişim Takibi", icon: TrendingUp },
         { href: "/settings", label: "Ayarlar", icon: Settings },
     ]
 

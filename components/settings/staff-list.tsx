@@ -11,10 +11,19 @@ import { StaffDialog } from "./staff-dialog"
 import { toast } from "sonner"
 
 export function StaffList() {
-    const [staff, setStaff] = useState<any[]>([])
+    interface Staff {
+        id: string
+        full_name: string
+        email: string
+        role: string
+        clerk_id: string
+    }
+
+    // Explicitly define state type
+    const [staff, setStaff] = useState<Staff[]>([])
     const [loading, setLoading] = useState(true)
     const [dialogOpen, setDialogOpen] = useState(false)
-    const [editingStaff, setEditingStaff] = useState<any>(null)
+    const [editingStaff, setEditingStaff] = useState<Staff | null>(null)
 
     const loadStaff = async () => {
         setLoading(true)
@@ -25,11 +34,14 @@ export function StaffList() {
         setLoading(false)
     }
 
+    // Add empty dependency array is correct, loadStaff is stable enough but to be 100% clean we can move it inside or suppress.
+    // Moving inside is cleaner.
     useEffect(() => {
         loadStaff()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    const handleEdit = (s: any) => {
+    const handleEdit = (s: Staff) => {
         setEditingStaff(s)
         setDialogOpen(true)
     }

@@ -43,9 +43,9 @@ export default function PackagesPage() {
             getRecentSales()
         ])
 
-        if (pkgRes.success) setPackages(pkgRes.data)
-        if (statsRes.success) setStats(statsRes.data)
-        if (salesRes.success) setSales(salesRes.data)
+        if (pkgRes.success) setPackages(pkgRes.data || [])
+        if (statsRes.success) setStats((statsRes.data as any) || { monthlyRevenue: 0, soldPackagesCount: 0, activeMembers: 0, topPackage: "-" })
+        if (salesRes.success) setSales(salesRes.data || [])
 
         setLoading(false)
     }

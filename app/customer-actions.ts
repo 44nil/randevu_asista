@@ -27,19 +27,18 @@ export async function getCustomersWithStats() {
     // Assuming sales.customer_id -> customers.id
     // sales.package_id -> packages.id
 
-    // We will fetch customers and map them.
+    // We will fetch customers and map them using customer_packages (New System)
     const { data: customers, error } = await supabase
         .from('customers')
         .select(`
             *,
-            sales (
-                id,
-                amount,
-                sale_date,
-                packages (
-                    name,
-                    sessions
-                )
+            customer_packages (
+                package_name,
+                initial_credits,
+                remaining_credits,
+                status,
+                expiry_date,
+                created_at
             ),
             appointments (
                 id,
@@ -57,31 +56,20 @@ export async function getCustomersWithStats() {
 
     // Process data to calculate stats
     const processed = customers.map((c: any) => {
-        // Get latest sale
-        const latestSale = c.sales?.sort((a: any, b: any) =>
-            new Date(b.sale_date).getTime() - new Date(a.sale_date).getTime()
-        )[0];
+        // Find active package (priority to active, then most recent)
+        // Sort packages by created_at desc
+        const packages = c.customer_packages?.sort((a: any, b: any) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ) || [];
 
-        const activePackage = latestSale ? latestSale.packages : null;
-
-        // Calculate usage
-        // usage = appointments after sale date
-        let usedSessions = 0;
-        let lastAttendance = null;
-
-        if (latestSale) {
-            const saleDate = new Date(latestSale.sale_date);
-            usedSessions = c.appointments?.filter((a: any) =>
-                new Date(a.start_time) >= saleDate &&
-                (a.status === 'confirmed' || a.status === 'completed')
-            ).length || 0;
-        }
+        const activePackage = packages.find((p: any) => p.status === 'active') || packages[0];
 
         // Last attendance (any time)
         const validAppointments = c.appointments?.filter((a: any) =>
             a.status === 'confirmed' || a.status === 'completed'
         ).sort((a: any, b: any) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
 
+        let lastAttendance = null;
         if (validAppointments && validAppointments.length > 0) {
             lastAttendance = validAppointments[0].start_time;
         }
@@ -91,13 +79,17 @@ export async function getCustomersWithStats() {
             name: c.name,
             phone: c.phone,
             email: c.email,
-            avatar: c.metadata?.avatar_url, // if exists
-            activePackage: activePackage ? activePackage.name : "Paket Yok",
-            totalSessions: activePackage ? activePackage.sessions : 0,
-            usedSessions: usedSessions,
-            remainingSessions: activePackage ? Math.max(0, activePackage.sessions - usedSessions) : 0,
+            avatar: c.metadata?.avatar_url,
+            activePackage: activePackage ? activePackage.package_name : "Paket Yok",
+            totalSessions: activePackage ? activePackage.initial_credits : 0,
+
+            // Used = Initial - Remaining
+            // If no package, 0.
+            usedSessions: activePackage ? (activePackage.initial_credits - activePackage.remaining_credits) : 0,
+
+            remainingSessions: activePackage ? activePackage.remaining_credits : 0,
             lastAttendance: lastAttendance,
-            status: activePackage ? (usedSessions >= activePackage.sessions ? 'expired' : 'active') : 'inactive'
+            status: activePackage ? (activePackage.remaining_credits <= 0 ? 'inactive' : 'active') : 'inactive'
         };
     });
 

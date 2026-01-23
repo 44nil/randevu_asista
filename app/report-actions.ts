@@ -52,7 +52,7 @@ export async function getRevenueStats(period: 'month' | 'year' = 'month') {
     // Better to use array for chart.
 
     // Let's build a sparse array map
-    const chartData = [];
+    const chartData: any[] = [];
     for (let i = 5; i >= 0; i--) {
         const d = new Date();
         d.setMonth(now.getMonth() - i);
@@ -101,6 +101,9 @@ export async function getInstructorStats() {
     // Or we use .select('staff_id, count', { count: 'exact', head: false })? No, that counts total.
 
     // Fetch all completed appointments
+    if (!user) return { success: false, error: "User not found" };
+
+    // Fetch all completed appointments
     const { data: appointments, error } = await supabase
         .from('appointments')
         .select(`
@@ -119,8 +122,9 @@ export async function getInstructorStats() {
 
     appointments.forEach(app => {
         // Safe check for staff
-        const staffName = Array.isArray(app.staff) ? app.staff[0]?.full_name : app.staff?.full_name;
-        const staffId = Array.isArray(app.staff) ? app.staff[0]?.id : app.staff?.id;
+        const staffRel = app.staff as any;
+        const staffName = Array.isArray(staffRel) ? staffRel[0]?.full_name : staffRel?.full_name;
+        const staffId = Array.isArray(staffRel) ? staffRel[0]?.id : staffRel?.id;
 
         if (!staffId || !staffName) return; // Skip if no staff assigned
 

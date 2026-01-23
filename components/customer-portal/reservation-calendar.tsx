@@ -4,13 +4,16 @@ import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight, X, User } from "lucide-react"
+import { ChevronLeft, ChevronRight, X, User, Users } from "lucide-react"
 import { format, addDays, startOfWeek, endOfWeek, isSameDay } from "date-fns"
 import { tr } from "date-fns/locale"
+import { cn, parseUTCTime } from "@/lib/utils"
 import { getAvailableClasses } from "@/app/portal-actions"
+import { addToWaitlist, removeFromWaitlist } from "@/app/waitlist-actions"
 import { BookingDialog } from "./booking-dialog"
 import { CancelDialog } from "./cancel-dialog"
 import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 export function ReservationCalendar() {
     const [currentDate, setCurrentDate] = useState(new Date())
@@ -96,6 +99,39 @@ export function ReservationCalendar() {
         const absoluteHours = hours + (minutes / 60);
         const offset = absoluteHours - START_HOUR;
         return Math.max(0, offset * PIXELS_PER_HOUR);
+    }
+
+    // Get capacity color based on availability percentage
+    const getCapacityColor = (bookedSlots: number, totalSlots: number) => {
+        const percentage = (bookedSlots / totalSlots) * 100;
+        if (percentage >= 100) return 'text-red-500';
+        if (percentage >= 50) return 'text-yellow-500';
+        return 'text-green-500';
+    }
+
+    // Handle waitlist actions
+    const handleJoinWaitlist = async (sessionId: string) => {
+        if (!currentCustomerId) {
+            toast.error("Müşteri bilgisi bulunamadı");
+            return;
+        }
+        const result = await addToWaitlist(sessionId, currentCustomerId);
+        if (result.success) {
+            toast.success(`Bekleme listesine eklendi (Sıra: ${result.data?.position})`);
+            fetchClasses(); // Refresh
+        } else {
+            toast.error(result.error || "Bekleme listesine eklenemedi");
+        }
+    }
+
+    const handleLeaveWaitlist = async (waitlistId: string) => {
+        const result = await removeFromWaitlist(waitlistId);
+        if (result.success) {
+            toast.success("Bekleme listesinden çıkarıldı");
+            fetchClasses(); // Refresh
+        } else {
+            toast.error(result.error || "Bekleme listesinden çıkarılamadı");
+        }
     }
 
     return (
@@ -237,8 +273,8 @@ export function ReservationCalendar() {
 
                                                 if (!matchesInstructor || !matchesType) return null;
 
-                                                const startDate = new Date(group.start_time);
-                                                const endDate = group.end_time ? new Date(group.end_time) : new Date(startDate.getTime() + 60 * 60 * 1000);
+                                                const startDate = parseUTCTime(group.start_time);
+                                                const endDate = group.end_time ? parseUTCTime(group.end_time) : new Date(startDate.getTime() + 60 * 60 * 1000);
                                                 const durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
 
                                                 const top = getTopPosition(startDate);
@@ -318,11 +354,9 @@ export function ReservationCalendar() {
                                                             </div>
 
                                                             <div className="flex justify-between items-center text-[9px] font-black mt-auto shrink-0 w-full">
-                                                                {isFull && !group.isBookedByMe ? (
-                                                                    <span className="text-red-500">DERS DOLU</span>
-                                                                ) : group.isBookedByMe ? (
+                                                                {group.isBookedByMe ? (
                                                                     <>
-                                                                        <span className="text-green-600">
+                                                                        <span className={getCapacityColor(group.bookedSlots, group.totalSlots)}>
                                                                             {capacityLabel}
                                                                         </span>
                                                                         <div className="bg-green-100 text-green-700 px-2 py-0.5 rounded-md font-bold flex items-center gap-1">
@@ -330,15 +364,35 @@ export function ReservationCalendar() {
                                                                             SİZİN
                                                                         </div>
                                                                     </>
-                                                                ) : (
+                                                                ) : isFull ? (
                                                                     <>
-                                                                        <span className="text-green-500">
-                                                                            {capacityLabel}
-                                                                        </span>
-                                                                        <button className="bg-green-500 text-white px-2 py-0.5 rounded-md hover:bg-green-600 transition-colors">
-                                                                            AYIRT
-                                                                        </button>
+                                                                        <span className="text-red-500">DOLU ({capacityLabel})</span>
+                                                                        {group.isOnWaitlist ? (
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleLeaveWaitlist(group.waitlistId);
+                                                                                }}
+                                                                                className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-md font-bold text-[9px]"
+                                                                            >
+                                                                                SIRADA: {group.waitlistPosition} ❌
+                                                                            </button>
+                                                                        ) : (
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleJoinWaitlist(group.id);
+                                                                                }}
+                                                                                className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md font-bold text-[9px] hover:bg-blue-200"
+                                                                            >
+                                                                                BEKLEME LİSTESİ +
+                                                                            </button>
+                                                                        )}
                                                                     </>
+                                                                ) : (
+                                                                    <span className={getCapacityColor(group.bookedSlots, group.totalSlots)}>
+                                                                        {capacityLabel}
+                                                                    </span>
                                                                 )}
                                                             </div>
                                                         </div>

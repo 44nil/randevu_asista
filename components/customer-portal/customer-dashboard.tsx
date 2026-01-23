@@ -75,7 +75,7 @@ export function CustomerDashboard() {
                     <div className="lg:col-span-2 space-y-6">
                         {/* Package Status - Horizontal Card */}
                         <div className="h-64">
-                            <PackageStatus pkg={activePackage} />
+                            <PackageStatus pkg={activePackage} lastUsage={data?.lastUsage || []} />
                         </div>
 
                         {/* Announcements */}

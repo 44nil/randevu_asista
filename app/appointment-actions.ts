@@ -30,14 +30,19 @@ export async function getAppointments(startDate?: string, endDate?: string) {
     }
 
     let query = supabase
-        .from('appointments')
+        .from('class_sessions')
         .select(`
             id,
             start_time,
             end_time,
             service_id,
-            status,
-            customer:customers(name)
+            capacity,
+            staff:instructor_id(full_name),
+            appointments(
+                id,
+                status,
+                customer:customers(name)
+            )
         `)
         .eq('organization_id', userData.organization_id);
 
@@ -48,7 +53,7 @@ export async function getAppointments(startDate?: string, endDate?: string) {
     }
 
     if (endDate) {
-        query = query.lte('start_time', endDate);
+        query = query.lte('end_time', endDate); // Use end_time for safer bounds
     }
 
     const { data, error } = await query.order('start_time', { ascending: true });
@@ -135,8 +140,18 @@ export async function createClassSession(data: {
             .single();
 
         if (sessionError || !session) {
-            console.error("❌ Session create error", sessionError);
-            continue; // Skip faulty week or abort? Continue for now.
+            console.error("❌ Session create error:", {
+                error: sessionError,
+                message: sessionError?.message,
+                details: sessionError?.details,
+                hint: sessionError?.hint,
+                code: sessionError?.code
+            });
+            // Return error instead of continuing
+            return {
+                success: false,
+                error: `Failed to create session: ${sessionError?.message || 'Unknown error'}`
+            };
         }
 
         console.log('✅ Session created:', session);

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
+import { createCustomer } from "@/app/actions"
 
 // Base schema for all customers
 const baseSchema = z.object({
@@ -28,15 +29,13 @@ const baseSchema = z.object({
     }),
     email: z.string().email({
         message: "Geçerli bir email adresi giriniz.",
-    }).optional(),
+    }).optional().or(z.literal("")),
 })
 
 // Industry specific schemas
 const pilatesSchema = baseSchema.extend({
     industry_type: z.literal("pilates"),
     metadata: z.object({
-        weight: z.string().optional(),
-        height: z.string().optional(),
         health_notes: z.string().optional(),
     }),
 })
@@ -79,10 +78,6 @@ export interface CustomerFormProps {
     onSuccess?: () => void
 }
 
-import { createCustomer } from "@/app/actions"
-
-// ... imports remain same until CustomerForm function ...
-
 export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }: CustomerFormProps) {
     const form = useForm<CustomerFormValues>({
         resolver: zodResolver(customerFormSchema),
@@ -95,8 +90,20 @@ export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }:
         },
     })
 
+    // Reset form when initialData changes (important for Edit Dialog)
+    useEffect(() => {
+        if (initialData) {
+            form.reset({
+                industry_type: industryType,
+                name: initialData.name || "",
+                phone: initialData.phone || "",
+                email: initialData.email || "",
+                metadata: initialData.metadata || {},
+            });
+        }
+    }, [initialData, form, industryType]);
+
     async function handleSubmit(data: CustomerFormValues) {
-        console.log('CustomerForm handleSubmit called, onSubmit exists:', !!onSubmit, 'data:', data);
         // If onSubmit is provided (edit mode), use it directly
         if (onSubmit) {
             await onSubmit(data);
@@ -120,15 +127,6 @@ export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }:
             })
         }
     }
-    // ... rest of the render function
-
-    // Debug: log form errors
-    useEffect(() => {
-        const formErrors = form.formState.errors;
-        if (Object.keys(formErrors).length > 0) {
-            console.log('Form validation errors:', formErrors);
-        }
-    }, [form.formState.errors]);
 
     return (
         <Form {...form}>
@@ -140,7 +138,7 @@ export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }:
                         <FormItem>
                             <FormLabel>Ad Soyad</FormLabel>
                             <FormControl>
-                                <Input placeholder="Ahmet Yılmaz" {...field} />
+                                <Input placeholder="Ahmet Yılmaz" {...field} value={field.value ?? ""} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -154,7 +152,7 @@ export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }:
                         <FormItem>
                             <FormLabel>Telefon</FormLabel>
                             <FormControl>
-                                <Input placeholder="555 123 45 67" {...field} />
+                                <Input placeholder="555 123 45 67" {...field} value={field.value ?? ""} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -168,7 +166,7 @@ export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }:
                         <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                                <Input placeholder="ornek@email.com" {...field} />
+                                <Input placeholder="ornek@email.com" {...field} value={field.value ?? ""} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -181,25 +179,12 @@ export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }:
                         <h3 className="font-semibold text-sm text-muted-foreground">Pilates Bilgileri</h3>
                         <FormField
                             control={form.control}
-                            name="metadata.weight"
+                            name="metadata.health_notes"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Kilo (kg)</FormLabel>
+                                    <FormLabel>Sağlık Notları</FormLabel>
                                     <FormControl>
-                                        <Input {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="metadata.height"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Boy (cm)</FormLabel>
-                                    <FormControl>
-                                        <Input {...field} />
+                                        <Input placeholder="Bel fıtığı, boyun ağrısı vb." {...field} value={field.value ?? ""} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -218,7 +203,7 @@ export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }:
                                 <FormItem>
                                     <FormLabel>Kan Grubu</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="A+" {...field} />
+                                        <Input placeholder="A+" {...field} value={field.value ?? ""} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -231,7 +216,7 @@ export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }:
                                 <FormItem>
                                     <FormLabel>Kronik Rahatsızlıklar</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Diyabet, Tansiyon..." {...field} />
+                                        <Input placeholder="Diyabet, Tansiyon..." {...field} value={field.value ?? ""} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -250,7 +235,7 @@ export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }:
                                 <FormItem>
                                     <FormLabel>Saç Tipi</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Kuru, Yağlı, İnce telli..." {...field} />
+                                        <Input placeholder="Kuru, Yağlı, İnce telli..." {...field} value={field.value ?? ""} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -263,7 +248,7 @@ export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }:
                                 <FormItem>
                                     <FormLabel>Boya Kodu</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="8.1, 7.3..." {...field} />
+                                        <Input placeholder="8.1, 7.3..." {...field} value={field.value ?? ""} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

@@ -3,6 +3,7 @@ import { ProfileForm } from "@/components/profile/profile-form"
 import { CustomerLayout } from "@/components/layout/customer-layout"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 
+
 export default async function ProfilePage() {
     const res = await getUserProfile()
 
@@ -29,8 +30,10 @@ export default async function ProfilePage() {
     if (role === 'customer') {
         return (
             <CustomerLayout>
-                <div className="max-w-6xl mx-auto py-8 px-4">
+                <div className="max-w-6xl mx-auto py-8 px-4 space-y-8">
                     {startContent}
+
+
                 </div>
             </CustomerLayout>
         )

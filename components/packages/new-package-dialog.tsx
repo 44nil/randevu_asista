@@ -43,10 +43,9 @@ export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
             setLoading(true)
             const result = await createPackage({
                 name: values.name,
-                type: values.type,
-                sessions: parseInt(values.sessions),
+                credits: parseInt(values.sessions),
                 price: parseFloat(values.price),
-                duration_days: values.duration_days ? parseInt(values.duration_days) : 30
+                validity_days: values.duration_days ? parseInt(values.duration_days) : 30
             })
 
             if (result.success) {
