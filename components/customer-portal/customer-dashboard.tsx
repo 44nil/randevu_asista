@@ -13,7 +13,10 @@ import { Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import { tr } from "date-fns/locale"
 
+import { useOrganization } from "@/providers/organization-provider"
+
 export function CustomerDashboard() {
+    const { config } = useOrganization()
     const [loading, setLoading] = useState(true)
     const [data, setData] = useState<any>(null)
 
@@ -96,8 +99,8 @@ export function CustomerDashboard() {
                             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center">
                                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">BU AY</p>
                                 <p className="text-3xl font-black text-slate-900">{data?.stats?.attended || 0}</p>
-                                <p className="text-xs text-slate-500 font-medium mt-1">Seans</p>
-                                <p className="text-[10px] text-green-600 font-bold mt-2 bg-green-50 inline-block px-2 py-0.5 rounded-full">
+                                <p className="text-xs text-slate-500 font-medium mt-1">{config.labels.session || 'Seans'}</p>
+                                <p className="text-([10px] text-green-600 font-bold mt-2 bg-green-50 inline-block px-2 py-0.5 rounded-full">
                                     +2 geçen aya göre
                                 </p>
                             </div>
@@ -115,7 +118,7 @@ export function CustomerDashboard() {
                 {/* Footer / Upcoming Classes */}
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-slate-900 uppercase tracking-widest text-xs">Gelecek Dersler</h3>
+                        <h3 className="font-bold text-slate-900 uppercase tracking-widest text-xs">Gelecek {config.labels.appointment}ler</h3>
                         <Button variant="ghost" size="sm" className="text-xs text-blue-600" onClick={() => window.location.href = '/history'}>Tümünü Gör</Button>
                     </div>
                     <div className="space-y-3">
@@ -137,7 +140,7 @@ export function CustomerDashboard() {
                             ))
                         ) : (
                             <div className="text-center py-8 text-slate-500 text-sm">
-                                Gelecek planlanmış dersiniz bulunmuyor.
+                                Gelecek planlanmış {config.labels.appointment ? config.labels.appointment.toLowerCase() : 'randevu'}nuz bulunmuyor.
                             </div>
                         )}
                     </div>

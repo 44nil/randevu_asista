@@ -13,8 +13,10 @@ import { updateOrganizationSettings } from "@/app/settings/actions"
 import { toast } from "sonner"
 import { Loader2, Camera } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const formSchema = z.object({
+    industry_type: z.string().optional(),
     name: z.string().min(2, { message: "Salon adı en az 2 karakter olmalıdır." }),
     phone: z.string().min(10, { message: "Geçerli bir telefon numarası giriniz." }),
     email: z.string().email({ message: "Geçerli bir e-posta adresi giriniz." }),
@@ -32,6 +34,7 @@ export function GeneralSettings({ defaultValues }: GeneralSettingsProps) {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
+            industry_type: defaultValues?.industry_type || "general",
             name: defaultValues?.name || "",
             phone: defaultValues?.phone || "",
             email: defaultValues?.email || "",
@@ -47,6 +50,8 @@ export function GeneralSettings({ defaultValues }: GeneralSettingsProps) {
 
             if (result.success) {
                 toast.success("Ayarlar güncellendi")
+                // Reload to apply industry changes globally
+                window.location.reload()
             } else {
                 toast.error("Hata", { description: result.error })
             }
@@ -95,19 +100,48 @@ export function GeneralSettings({ defaultValues }: GeneralSettingsProps) {
                     <CardContent>
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                                <FormField
-                                    control={form.control}
-                                    name="name"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Salon Adı</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Örn: Zen Pilates Studio" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="industry_type"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>İşletme Tipi</FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="İşletme Tipi Seçiniz" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="pilates">Pilates Stüdyosu</SelectItem>
+                                                        <SelectItem value="hair">Kuaför / Berber</SelectItem>
+                                                        <SelectItem value="dental">Diş Kliniği</SelectItem>
+                                                        <SelectItem value="general">Güzellik Merkezi / Diğer</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormDescription>
+                                                    Sistemin terminolojisi seçiminize göre değişecektir.
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="name"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Salon Adı</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Örn: Zen Pilates Studio" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField

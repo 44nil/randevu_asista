@@ -1,6 +1,5 @@
-"use client"
-
 import { useState } from "react"
+import { useOrganization } from "@/providers/organization-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -36,6 +35,7 @@ interface MembersTableProps {
 }
 
 export function MembersTable({ data, onRefresh }: MembersTableProps) {
+    const { config } = useOrganization()
     const [searchTerm, setSearchTerm] = useState("")
     const [filter, setFilter] = useState("all") // all, reformer, mat, duo
     const [editingMember, setEditingMember] = useState<any>(null)
@@ -44,15 +44,22 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
     const filteredData = data.filter(member => {
         const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             member.email?.toLowerCase().includes(searchTerm.toLowerCase())
-        // Filter by package type could happen here if we had package type in data
-        return matchesSearch
+
+        let matchesFilter = true;
+        if (filter === 'active') {
+            matchesFilter = member.status === 'active' || member.remainingSessions > 0;
+        } else if (filter === 'inactive') {
+            matchesFilter = member.status !== 'active' && member.remainingSessions <= 0;
+        }
+
+        return matchesSearch && matchesFilter
     })
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("Üyeyi silmek istediğinizden emin misiniz?")) return
+    const handleDelete = async (id: string, name: string) => {
+        if (!confirm(`${name} adlı ${config.labels.customer.toLowerCase()}i silmek istediğinizden emin misiniz?`)) return
         const res = await deleteCustomer(id)
         if (res.success) {
-            toast.success("Üye silindi")
+            toast.success(`${config.labels.customer} silindi`)
             onRefresh()
         } else {
             toast.error("Hata", { description: res.error })
@@ -64,15 +71,19 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
             {/* Filters */}
             <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
                 <div className="flex gap-2">
-                    {["Hepsi", "Reformer", "Mat Pilates", "Duo"].map((tab) => (
+                    {[
+                        { label: "Hepsi", value: "all" },
+                        { label: "Aktif", value: "active" },
+                        { label: "Pasif", value: "inactive" }
+                    ].map((tab) => (
                         <Button
-                            key={tab}
-                            variant={filter === tab.toLowerCase() || (tab === "Hepsi" && filter === "all") ? "default" : "outline"}
+                            key={tab.value}
+                            variant={filter === tab.value ? "default" : "outline"}
                             size="sm"
-                            onClick={() => setFilter(tab === "Hepsi" ? "all" : tab.toLowerCase())}
+                            onClick={() => setFilter(tab.value)}
                             className="rounded-full px-4"
                         >
-                            {tab}
+                            {tab.label}
                         </Button>
                     ))}
                 </div>
@@ -92,10 +103,10 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
                 <Table>
                     <TableHeader className="bg-slate-50">
                         <TableRow>
-                            <TableHead className="w-[300px]">ÜYE ADI</TableHead>
+                            <TableHead className="w-[300px] uppercase">{config.labels.customer} ADI</TableHead>
                             <TableHead>İLETİŞİM</TableHead>
-                            <TableHead>AKTİF PAKET</TableHead>
-                            <TableHead className="w-[200px]">KALAN SEANS</TableHead>
+                            <TableHead>AKTİF {config.labels.package || 'HİZMET'}</TableHead>
+                            <TableHead className="w-[200px]">KALAN {config.labels.session || 'HAK'}</TableHead>
                             <TableHead>SON KATILIM</TableHead>
                             <TableHead className="text-right">İŞLEMLER</TableHead>
                         </TableRow>
@@ -128,7 +139,7 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
                                         </Badge>
                                     ) : (
                                         <Badge variant="outline" className="text-slate-500">
-                                            Paket Yok
+                                            {config.labels.package ? `${config.labels.package} Yok` : 'Hizmet Yok'}
                                         </Badge>
                                     )}
                                 </TableCell>
@@ -194,7 +205,7 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleDelete(member.id)}>
+                                                <DropdownMenuItem onClick={() => handleDelete(member.id, member.name)}>
                                                     <Trash2 className="mr-2 h-4 w-4 text-red-500" />
                                                     <span className="text-red-500">Sil</span>
                                                 </DropdownMenuItem>

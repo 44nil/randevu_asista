@@ -1,3 +1,6 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { getRevenueStats, getInstructorStats } from "@/app/report-actions"
 import { getUserProfile } from "@/app/actions"
 import { RevenueChart } from "@/components/reports/revenue-chart"
@@ -6,20 +9,67 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TrendingUp, Users, Calendar } from "lucide-react"
+import { useOrganization } from "@/providers/organization-provider"
+import { Loader2 } from "lucide-react"
 
-export default async function ReportsPage() {
-    // 1. Verify Role
-    const userProfile = await getUserProfile()
+export default function ReportsPage() {
+    const { config } = useOrganization()
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+    const [accessDenied, setAccessDenied] = useState(false)
+    const [revenueStats, setRevenueStats] = useState<any[]>([])
+    const [instructorStats, setInstructorStats] = useState<any[]>([])
 
-    if (!userProfile) {
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                // 1. Verify Role
+                const userProfile = await getUserProfile()
+
+                if (!userProfile) {
+                    setError("Oturum açmanız gerekiyor.")
+                    setLoading(false)
+                    return
+                }
+
+                if (userProfile.role !== 'owner' && userProfile.role !== 'admin') {
+                    setAccessDenied(true)
+                    setLoading(false)
+                    return
+                }
+
+                // 2. Fetch Data
+                const [revenueRes, instructorRes] = await Promise.all([
+                    getRevenueStats('month'),
+                    getInstructorStats()
+                ])
+
+                if (!revenueRes.success || !instructorRes.success) {
+                    setError("Veriler yüklenirken bir hata oluştu.")
+                } else {
+                    setRevenueStats(revenueRes.data || [])
+                    setInstructorStats(instructorRes.data || [])
+                }
+            } catch (err) {
+                setError("Beklenmeyen bir hata oluştu")
+            } finally {
+                setLoading(false)
+            }
+        }
+        loadData()
+    }, [])
+
+    if (loading) {
         return (
             <DashboardLayout title="Raporlar">
-                <div className="p-8 text-center text-slate-500">Oturum açmanız gerekiyor.</div>
+                <div className="h-96 flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                </div>
             </DashboardLayout>
         )
     }
 
-    if (userProfile.role !== 'owner' && userProfile.role !== 'admin') {
+    if (accessDenied) {
         return (
             <DashboardLayout title="Erişim Engellendi">
                 <div className="flex h-96 flex-col items-center justify-center gap-4 text-center">
@@ -30,26 +80,17 @@ export default async function ReportsPage() {
         )
     }
 
-    // 2. Fetch Data
-    const revenueData = await getRevenueStats('month')
-    const instructorData = await getInstructorStats()
-
-    if (!revenueData.success || !instructorData.success) {
+    if (error) {
         return (
             <DashboardLayout title="Raporlar">
-                <div className="p-8 text-center text-red-500">Veriler yüklenirken bir hata oluştu.</div>
+                <div className="p-8 text-center text-red-500">{error}</div>
             </DashboardLayout>
         )
     }
 
-    // 3. Prepare Data
-    const revenueStats = revenueData.data || [];
-    const instructorStats = instructorData.data || [];
-
     const totalRevenue = revenueStats.reduce((acc: number, curr: any) => acc + curr.value, 0)
     const totalClasses = instructorStats.reduce((acc: number, curr: any) => acc + curr.classes, 0)
 
-    // 4. Render
     return (
         <DashboardLayout title="Raporlar">
             <div className="space-y-6">
@@ -68,12 +109,12 @@ export default async function ReportsPage() {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Verilen Dersler</CardTitle>
+                            <CardTitle className="text-sm font-medium">Verilen {config.labels.appointment}ler</CardTitle>
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{totalClasses}</div>
-                            <p className="text-xs text-muted-foreground">Tamamlanan seanslar</p>
+                            <p className="text-xs text-muted-foreground">Tamamlanan {config.labels.session?.toLowerCase()}lar</p>
                         </CardContent>
                     </Card>
                     <Card>

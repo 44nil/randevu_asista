@@ -12,7 +12,10 @@ import { NewPackageDialog } from "@/components/packages/new-package-dialog"
 import { getPackages, getPackagePageStats, getRecentSales } from "@/app/package-actions"
 import { toast } from "sonner"
 
+import { useOrganization } from "@/providers/organization-provider"
+
 export default function PackagesPage() {
+    const { config } = useOrganization()
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(true)
     const [packages, setPackages] = useState<any[]>([])
@@ -56,21 +59,21 @@ export default function PackagesPage() {
 
     return (
         <DashboardLayout
-            title="Paket ve Satış Yönetimi"
-            subtitle="Salonunuzdaki ders paketlerini oluşturun, fiyatlandırın ve satış raporlarını inceleyin."
+            title={`${config.labels.package} ve Satış Yönetimi`}
+            subtitle={`Salonunuzdaki ${config.labels.appointment?.toLowerCase()} ${config.labels.package?.toLowerCase()}lerini oluşturun, fiyatlandırın ve satış raporlarını inceleyin.`}
             headerAction={
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
                         <Button className="bg-blue-600 hover:bg-blue-700">
                             <Plus className="mr-2 h-4 w-4" />
-                            Yeni Paket Ekle
+                            Yeni {config.labels.package} Ekle
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[500px]">
                         <DialogHeader>
-                            <DialogTitle>Yeni Paket Oluştur</DialogTitle>
+                            <DialogTitle>Yeni {config.labels.package} Oluştur</DialogTitle>
                             <DialogDescription>
-                                Yeni bir ders paketi tanımlayın ve fiyatlandırın.
+                                Yeni bir {config.labels.appointment?.toLowerCase()} {config.labels.package?.toLowerCase()}i tanımlayın ve fiyatlandırın.
                             </DialogDescription>
                         </DialogHeader>
                         <NewPackageDialog

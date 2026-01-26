@@ -12,7 +12,8 @@ export async function createPackage(data: {
     description?: string,
     price: number,
     credits: number,
-    validity_days?: number
+    validity_days?: number,
+    duration?: number
 }) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
@@ -43,8 +44,8 @@ export async function createPackage(data: {
             description: data.description,
             price: data.price,
             credits: data.credits,
-            sessions: data.credits, // Legacy support
-            validity_days: data.validity_days
+            validity_days: data.validity_days,
+            duration_minutes: data.duration || 60
         })
         .select()
         .single();

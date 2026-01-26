@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogHeader, Dialog
 import { CustomerForm } from "@/components/forms/customer-form"
 import { Card, CardContent } from "@/components/ui/card"
 import { toast } from "sonner"
+import { useOrganization } from "@/providers/organization-provider"
 
 interface CustomersClientProps {
     role?: string
@@ -17,6 +18,7 @@ interface CustomersClientProps {
 }
 
 export function CustomersClient({ role, initialMembers, initialStats }: CustomersClientProps) {
+    const { config, organization } = useOrganization()
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [members, setMembers] = useState<any[]>(initialMembers || [])
@@ -50,8 +52,8 @@ export function CustomersClient({ role, initialMembers, initialStats }: Customer
 
     return (
         <DashboardLayout
-            title="Üye ve Paket Yönetimi"
-            subtitle="Tüm üyelerin aktif paketlerini ve kalan haklarını buradan takip edebilirsiniz."
+            title={`${config.labels.customer} ve Paket Yönetimi`}
+            subtitle={`Tüm ${config.labels.customer.toLowerCase()}lerin aktif paketlerini ve kalan haklarını buradan takip edebilirsiniz.`}
             role={role}
             headerAction={
                 (role !== 'staff') ? (
@@ -59,18 +61,18 @@ export function CustomersClient({ role, initialMembers, initialStats }: Customer
                         <DialogTrigger asChild>
                             <Button className="bg-blue-600 hover:bg-blue-700">
                                 <Plus className="mr-2 h-4 w-4" />
-                                Yeni Üye
+                                {config.labels.createCustomer}
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
-                                <DialogTitle>Yeni Müşteri Ekle</DialogTitle>
+                                <DialogTitle>{config.labels.createCustomer}</DialogTitle>
                                 <DialogDescription>
-                                    Sektör tipine göre dinamik form (Pilates)
+                                    {config.labels.customer} bilgilerini giriniz.
                                 </DialogDescription>
                             </DialogHeader>
                             <CustomerForm
-                                industryType="pilates"
+                                industryType={(organization?.industry_type || 'general') as any}
                                 onSuccess={() => {
                                     setOpen(false)
                                     loadData()
@@ -88,7 +90,7 @@ export function CustomersClient({ role, initialMembers, initialStats }: Customer
                         <CardContent className="p-6">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <p className="text-sm font-medium text-slate-500">Toplam Aktif Üye</p>
+                                    <p className="text-sm font-medium text-slate-500">Toplam Aktif {config.labels.customer}</p>
                                     <h3 className="text-3xl font-bold text-slate-900 mt-2">{stats.totalMembers}</h3>
                                     <p className="text-xs text-green-600 font-medium mt-1 flex items-center">
                                         +12% <span className="text-slate-400 ml-1">geçen aya göre</span>
@@ -105,7 +107,7 @@ export function CustomersClient({ role, initialMembers, initialStats }: Customer
                         <CardContent className="p-6">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <p className="text-sm font-medium text-slate-500">Biten Paketler</p>
+                                    <p className="text-sm font-medium text-slate-500">Biten {config.labels.package}</p>
                                     <h3 className="text-3xl font-bold text-slate-900 mt-2">{stats.expiredPackages}</h3>
                                     <p className="text-xs text-orange-500 font-medium mt-1">
                                         Yenileme Bekliyor

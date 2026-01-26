@@ -15,7 +15,10 @@ interface PackageStatsProps {
     data: StatsData
 }
 
+import { useOrganization } from "@/providers/organization-provider"
+
 export function PackageStats({ data }: PackageStatsProps) {
+    const { config } = useOrganization()
     return (
         <div className="space-y-6">
             {/* Top Cards */}
@@ -41,7 +44,7 @@ export function PackageStats({ data }: PackageStatsProps) {
                     <CardContent className="p-6">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-sm font-medium text-slate-500">Satılan Paketler</p>
+                                <p className="text-sm font-medium text-slate-500">Satılan {config.labels.package}ler</p>
                                 <h3 className="text-2xl font-bold text-slate-900 mt-2">{data.soldPackagesCount}</h3>
                                 <p className="text-xs text-green-600 font-medium mt-1">
                                     +5% <span className="text-slate-400 ml-1">geçen aya göre</span>
@@ -58,7 +61,7 @@ export function PackageStats({ data }: PackageStatsProps) {
                     <CardContent className="p-6">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-sm font-medium text-slate-500">Aktif Üyeler</p>
+                                <p className="text-sm font-medium text-slate-500">Aktif {config.labels.customer}ler</p>
                                 <h3 className="text-2xl font-bold text-slate-900 mt-2">{data.activeMembers}</h3>
                                 <p className="text-xs text-green-600 font-medium mt-1">
                                     +2% <span className="text-slate-400 ml-1">geçen aya göre</span>
@@ -75,7 +78,7 @@ export function PackageStats({ data }: PackageStatsProps) {
                     <CardContent className="p-6">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-sm font-medium text-slate-500">En Popüler Paket</p>
+                                <p className="text-sm font-medium text-slate-500">En Popüler {config.labels.package}</p>
                                 <h3 className="text-lg font-bold text-slate-900 mt-2 line-clamp-1" title={data.topPackage}>{data.topPackage}</h3>
                                 {/* <p className="text-xs text-slate-400 font-medium mt-1">
                                     Bu ay 42 satış
@@ -120,7 +123,7 @@ export function PackageStats({ data }: PackageStatsProps) {
                 {/* Package Distribution Chart */}
                 <div className="bg-white rounded-xl border shadow-sm p-6 flex flex-col items-center justify-center">
                     <div className="w-full flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-slate-900">Paket Türüne Göre Dağılım</h3>
+                        <h3 className="font-bold text-slate-900">{config.labels.package} Türüne Göre Dağılım</h3>
                         <span className="text-xs text-red-500 font-medium">-3% Geçen Aya Göre</span>
                     </div>
 

@@ -1,0 +1,173 @@
+
+export type IndustryType = 'pilates' | 'hair' | 'dental' | 'general';
+
+export interface IndustryConfig {
+    labels: {
+        appointment: string; // e.g. "Ders", "Randevu"
+        createAppointment: string; // e.g. "Ders Ekle", "Randevu Oluştur"
+        customer: string; // e.g. "Üye", "Müşteri", "Hasta"
+        createCustomer: string; // e.g. "Yeni Üye", "Yeni Müşteri"
+        program: string; // e.g. "Haftalık Program", "Randevu Takvimi"
+        package: string; // e.g. "Paket", "Hizmet"
+        session: string; // e.g. "Seans", "Randevu Hakkı"
+    };
+    appointmentTypes: { value: string; label: string }[];
+    packageTypes: { value: string; label: string }[];
+    features: {
+        measurements: boolean; // Vücut ölçümleri
+        classes: boolean; // Grup dersleri (Reformer vb.) vs Birebir Randevu
+        packages: boolean; // Paket satışı var mı?
+    };
+}
+
+export const INDUSTRY_CONFIG: Record<IndustryType, IndustryConfig> = {
+    pilates: {
+        labels: {
+            appointment: "Ders",
+            createAppointment: "Ders Ekle",
+            customer: "Üye",
+            createCustomer: "Yeni Üye",
+            program: "Haftalık Program",
+            package: "Paket",
+            session: "Seans"
+        },
+        appointmentTypes: [
+            { value: 'reformer', label: 'Reformer' },
+            { value: 'mat', label: 'Mat Pilates' },
+            { value: 'private', label: 'Özel Ders' }
+        ],
+        packageTypes: [
+            { value: 'group', label: 'Grup Reformer' },
+            { value: 'private', label: 'Özel Ders' },
+            { value: 'duo', label: 'Düet' }
+        ],
+        features: {
+            measurements: true,
+            classes: true,
+            packages: true
+        }
+    },
+    hair: {
+        labels: {
+            appointment: "Randevu",
+            createAppointment: "Randevu Ekle",
+            customer: "Müşteri",
+            createCustomer: "Yeni Müşteri",
+            program: "Randevu Takvimi",
+            package: "Hizmet",
+            session: "Adet"
+        },
+        appointmentTypes: [
+            { value: 'hair_cut', label: 'Saç Kesimi' },
+            { value: 'blow_dry', label: 'Fön (Düz, Dalgalı, Maşa)' },
+            { value: 'root_color', label: 'Dip Boyası' },
+            { value: 'full_color', label: 'Bütün Boya' },
+            { value: 'highlights', label: 'Röfle / Balyaj' },
+            { value: 'ombre', label: 'Ombre / Sombre' },
+            { value: 'bleach', label: 'Saç Açma (Oryal)' },
+            { value: 'keratin', label: 'Keratin Bakımı / Brezilya Fönü' },
+            { value: 'botox', label: 'Saç Botoksu ve Maske' },
+            { value: 'manicure', label: 'Manikür' },
+            { value: 'pedicure', label: 'Pedikür' },
+            { value: 'gel_polish', label: 'Kalıcı Oje' },
+            { value: 'prosthetic_nail', label: 'Protez / Jel Tırnak' },
+            { value: 'nail_art', label: 'Nail Art' },
+            { value: 'eyebrow', label: 'Kaş ve Bıyık Alımı' },
+            { value: 'lamination', label: 'Kaş Laminasyonu / Microblading' },
+            { value: 'lash_lift', label: 'Kirpik Lifting / İpek Kirpik' },
+            { value: 'makeup', label: 'Günlük ve Gece Makyajı' },
+            { value: 'bridal', label: 'Gelin Başı ve Makyaj' },
+            { value: 'bun_braid', label: 'Topuz ve Örgü Modelleri' },
+            { value: 'skincare', label: 'Cilt Bakımı ve Maske' },
+            { value: 'extensions', label: 'Saç Kaynak' },
+            { value: 'wax', label: 'Yüz ve Vücut Ağdası' }
+        ],
+        packageTypes: [
+            { value: 'standard', label: 'Genel / Diğer' },
+            { value: 'package_deal', label: 'Çoklu Paket' },
+            { value: 'bridal_package', label: 'Gelin Paketi' },
+            { value: 'hair_cut', label: 'Saç Kesimi' },
+            { value: 'blow_dry', label: 'Fön (Düz, Dalgalı, Maşa)' },
+            { value: 'root_color', label: 'Dip Boyası' },
+            { value: 'full_color', label: 'Bütün Boya' },
+            { value: 'highlights', label: 'Röfle / Balyaj' },
+            { value: 'ombre', label: 'Ombre / Sombre' },
+            { value: 'bleach', label: 'Saç Açma (Oryal)' },
+            { value: 'keratin', label: 'Keratin Bakımı / Brezilya Fönü' },
+            { value: 'botox', label: 'Saç Botoksu ve Maske' },
+            { value: 'manicure', label: 'Manikür' },
+            { value: 'pedicure', label: 'Pedikür' },
+            { value: 'gel_polish', label: 'Kalıcı Oje' },
+            { value: 'prosthetic_nail', label: 'Protez / Jel Tırnak' },
+            { value: 'nail_art', label: 'Nail Art' },
+            { value: 'eyebrow', label: 'Kaş ve Bıyık Alımı' },
+            { value: 'lamination', label: 'Kaş Laminasyonu / Microblading' },
+            { value: 'lash_lift', label: 'Kirpik Lifting / İpek Kirpik' },
+            { value: 'makeup', label: 'Günlük ve Gece Makyajı' },
+            { value: 'bridal', label: 'Gelin Başı ve Makyaj' },
+            { value: 'bun_braid', label: 'Topuz ve Örgü Modelleri' },
+            { value: 'skincare', label: 'Cilt Bakımı ve Maske' },
+            { value: 'extensions', label: 'Saç Kaynak' },
+            { value: 'wax', label: 'Yüz ve Vücut Ağdası' }
+        ],
+        features: {
+            measurements: false,
+            classes: false,
+            packages: true
+        }
+    },
+    dental: {
+        labels: {
+            appointment: "Randevu",
+            createAppointment: "Randevu Oluştur",
+            customer: "Hasta",
+            createCustomer: "Yeni Hasta",
+            program: "Randevu Takvimi",
+            package: "Tedavi",
+            session: "Seans"
+        },
+        appointmentTypes: [
+            { value: 'checkup', label: 'Muayene' },
+            { value: 'cleaning', label: 'Temizlik' },
+            { value: 'treatment', label: 'Tedavi' }
+        ],
+        packageTypes: [
+            { value: 'standard', label: 'Standart Tedavi' }
+        ],
+        features: {
+            measurements: false,
+            classes: false,
+            packages: false
+        }
+    },
+    general: {
+        labels: {
+            appointment: "Randevu",
+            createAppointment: "Randevu Ekle",
+            customer: "Müşteri",
+            createCustomer: "Yeni Müşteri",
+            program: "Takvim",
+            package: "Paket",
+            session: "Hak"
+        },
+        appointmentTypes: [
+            { value: 'standard', label: 'Standart Randevu' },
+            { value: 'meeting', label: 'Görüşme' }
+        ],
+        packageTypes: [
+            { value: 'standard', label: 'Standart Paket' }
+        ],
+        features: {
+            measurements: false,
+            classes: false,
+            packages: true
+        }
+    }
+};
+
+export function getIndustryConfig(type?: string): IndustryConfig {
+    // Default to 'general' if unknown or undefined, but if 'pilates' (legacy default) use that.
+    // Actually, let's look at what the type string is.
+    const key = (type as IndustryType) || 'general';
+    return INDUSTRY_CONFIG[key] || INDUSTRY_CONFIG.general;
+}

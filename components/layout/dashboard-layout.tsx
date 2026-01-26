@@ -14,7 +14,10 @@ interface DashboardLayoutProps {
     role?: string // Added role prop
 }
 
+import { useOrganization } from "@/providers/organization-provider"
+
 export function DashboardLayout({ children, title, subtitle, headerAction, role }: DashboardLayoutProps) {
+    const { config } = useOrganization()
     return (
         <div className="flex h-screen bg-slate-50">
             {/* Sidebar */}
@@ -28,7 +31,7 @@ export function DashboardLayout({ children, title, subtitle, headerAction, role 
                         <div className="relative w-64 hidden md:block">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                             <Input
-                                placeholder="Hızlı ara (Üye, Ders...)"
+                                placeholder={`Hızlı ara (${config.labels.customer}, ${config.labels.appointment}...)`}
                                 className="pl-9 bg-slate-50 border-slate-200 focus:bg-white transition-colors"
                             />
                         </div>

@@ -14,6 +14,7 @@ import { getWaitlist, removeFromWaitlist, promoteFromWaitlist } from "@/app/wait
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useOrganization } from "@/providers/organization-provider"
 
 // Types
 type ViewType = "week" | "day" | "list"
@@ -34,6 +35,7 @@ interface Appointment {
 }
 
 export function WeeklyCalendar() {
+    const { config } = useOrganization()
     const [currentDate, setCurrentDate] = useState(new Date())
     const [appointments, setAppointments] = useState<Appointment[]>([])
     const [stats, setStats] = useState({
@@ -103,7 +105,8 @@ export function WeeklyCalendar() {
                                 'reformer': 'ALETLİ PİLATES',
                                 'mat': 'MAT PİLATES'
                             }
-                            return map[id?.toLowerCase()] || id?.toUpperCase() || 'DERS'
+                            // Default to config label if not in map
+                            return map[id?.toLowerCase()] || id?.toUpperCase() || config.labels.appointment.toUpperCase()
                         }
 
                         return {
@@ -142,7 +145,7 @@ export function WeeklyCalendar() {
                 }
             })
             .finally(() => setLoading(false))
-    }, [currentDate])
+    }, [currentDate, config.labels.appointment]) // added dependency
 
     // Generate days of the week
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -200,7 +203,7 @@ export function WeeklyCalendar() {
             {/* Header Toolbar */}
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border shadow-sm">
                 <div>
-                    <h2 className="text-xl font-bold text-slate-900">Haftalık Ders Programı</h2>
+                    <h2 className="text-xl font-bold text-slate-900">{config.labels.program}</h2>
                     <div className="flex items-center gap-2 text-slate-500 text-sm mt-1">
                         <CalendarIcon className="h-4 w-4" />
                         <span>{format(weekStart, 'd MMMM', { locale: tr })} - {format(weekEnd, 'd MMMM yyyy', { locale: tr })}</span>
@@ -217,11 +220,13 @@ export function WeeklyCalendar() {
                     </Button>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs font-medium">
-                    <div className="flex items-center gap-2"> <span className="h-2 w-2 rounded-full bg-purple-500" /> REFORMER </div>
-                    <div className="flex items-center gap-2"> <span className="h-2 w-2 rounded-full bg-blue-500" /> MAT PİLATES </div>
-                    <div className="flex items-center gap-2"> <span className="h-2 w-2 rounded-full bg-orange-500" /> ÖZEL </div>
-                </div>
+                {config.features.classes && (
+                    <div className="flex items-center gap-4 text-xs font-medium">
+                        <div className="flex items-center gap-2"> <span className="h-2 w-2 rounded-full bg-purple-500" /> REFORMER </div>
+                        <div className="flex items-center gap-2"> <span className="h-2 w-2 rounded-full bg-blue-500" /> MAT PİLATES </div>
+                        <div className="flex items-center gap-2"> <span className="h-2 w-2 rounded-full bg-orange-500" /> ÖZEL </div>
+                    </div>
+                )}
             </div>
 
             {/* Calendar Grid */}
@@ -389,7 +394,7 @@ export function WeeklyCalendar() {
                             <Users className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-slate-500 uppercase">Toplam Üye</p>
+                            <p className="text-sm font-medium text-slate-500 uppercase">Toplam {config.labels.customer}</p>
                             <p className="text-3xl font-bold text-slate-900">{stats.totalMembers}</p>
                         </div>
                     </CardContent>
@@ -401,7 +406,7 @@ export function WeeklyCalendar() {
                             <CheckCircle className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-slate-500 uppercase">Tamamlanan Dersler</p>
+                            <p className="text-sm font-medium text-slate-500 uppercase">Tamamlanan {config.labels.appointment}ler</p>
                             <p className="text-3xl font-bold text-slate-900">
                                 {stats.completedClasses} <span className="text-lg text-slate-400 font-normal">/ {stats.totalClasses}</span>
                             </p>

@@ -20,7 +20,10 @@ interface RecentSalesProps {
     data: Sale[]
 }
 
+import { useOrganization } from "@/providers/organization-provider"
+
 export function RecentSales({ data }: RecentSalesProps) {
+    const { config } = useOrganization()
     return (
         <div className="bg-white rounded-xl border shadow-sm p-6">
             <div className="flex justify-between items-center mb-6">
@@ -33,8 +36,8 @@ export function RecentSales({ data }: RecentSalesProps) {
             <div className="space-y-4">
                 {/* Header Row */}
                 <div className="grid grid-cols-4 text-xs font-semibold text-slate-500 pb-2 border-b uppercase">
-                    <div>Öğrenci</div>
-                    <div>Satın Alınan Paket</div>
+                    <div>{config.labels.customer}</div>
+                    <div>Satın Alınan {config.labels.package}</div>
                     <div>Tarih</div>
                     <div className="text-right">Tutar</div>
                 </div>
@@ -54,7 +57,7 @@ export function RecentSales({ data }: RecentSalesProps) {
                                 <span className="text-sm font-medium text-slate-900">{sale.customerName}</span>
                             </div>
                             <div className="text-sm text-slate-600">
-                                {sale.packageName || "Bilinmeyen Paket"}
+                                {sale.packageName || `Bilinmeyen ${config.labels.package}`}
                             </div>
                             <div className="text-sm text-slate-500">
                                 {format(new Date(sale.date), "d MMM yyyy", { locale: tr })}

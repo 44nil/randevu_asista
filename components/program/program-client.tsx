@@ -8,28 +8,31 @@ import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from 
 import { AppointmentForm } from "@/components/forms/appointment-form"
 import { useState } from "react"
 
+import { useOrganization } from "@/providers/organization-provider"
+
 interface ProgramClientProps {
     role?: string
 }
 
 export function ProgramClient({ role }: ProgramClientProps) {
+    const { config } = useOrganization()
     const [open, setOpen] = useState(false)
 
     return (
         <DashboardLayout
-            title="Program"
+            title={config.labels.program}
             role={role}
             headerAction={
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
                         <Button className="bg-blue-600 hover:bg-blue-700">
                             <Plus className="mr-2 h-4 w-4" />
-                            Ders Ekle
+                            {config.labels.createAppointment}
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>Yeni Ders Oluştur</DialogTitle>
+                            <DialogTitle>{config.labels.createAppointment}</DialogTitle>
                         </DialogHeader>
                         <AppointmentForm onSuccess={() => {
                             setOpen(false)

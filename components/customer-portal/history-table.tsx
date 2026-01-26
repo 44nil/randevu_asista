@@ -21,8 +21,11 @@ interface HistoryTableProps {
 }
 
 
+import { useOrganization } from "@/providers/organization-provider"
+
 export function HistoryTable({ history }: HistoryTableProps) {
     const router = useRouter()
+    const { config } = useOrganization()
 
     const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null)
     const [cancellationReason, setCancellationReason] = useState("")
@@ -65,7 +68,7 @@ export function HistoryTable({ history }: HistoryTableProps) {
             <div className="flex flex-col sm:flex-row gap-4 justify-between">
                 <div className="relative w-full sm:w-96">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-                    <Input placeholder="Ders, eğitmen veya paket ara..." className="pl-9 bg-white" />
+                    <Input placeholder={`${config.labels.appointment}, eğitmen veya ${config.labels.package.toLowerCase()} ara...`} className="pl-9 bg-white" />
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" className="gap-2 text-slate-600">
@@ -85,9 +88,9 @@ export function HistoryTable({ history }: HistoryTableProps) {
                     <TableHeader className="bg-slate-50">
                         <TableRow>
                             <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider">Tarih & Saat</TableHead>
-                            <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider">Ders Adı</TableHead>
+                            <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider">{config.labels.appointment} Adı</TableHead>
                             <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider">Eğitmen</TableHead>
-                            <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider">Kullanılan Paket</TableHead>
+                            <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider">Kullanılan {config.labels.package}</TableHead>
                             <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider">Durum</TableHead>
                             <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider text-right">İşlem</TableHead>
                         </TableRow>
@@ -96,7 +99,7 @@ export function HistoryTable({ history }: HistoryTableProps) {
                         {!history || history.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center py-12 text-slate-500">
-                                    Henüz kayıtlı bir dersiniz yok.
+                                    Henüz kayıtlı bir {config.labels.appointment ? config.labels.appointment.toLowerCase() : 'randevu'}nuz yok.
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -114,7 +117,7 @@ export function HistoryTable({ history }: HistoryTableProps) {
                                                 </span>
                                             </div>
                                         </TableCell>
-                                        <TableCell>{item.service_id || "Genel Ders"}</TableCell>
+                                        <TableCell>{item.service_id || `Genel ${config.labels.appointment}`}</TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
                                                 <div className="h-6 w-6 rounded-full bg-blue-100 text-blue-600 text-[10px] font-bold flex items-center justify-center">
@@ -153,7 +156,7 @@ export function HistoryTable({ history }: HistoryTableProps) {
                 {/* Pagination */}
                 {history && history.length > 5 && (
                     <div className="flex items-center justify-between p-4 border-t bg-slate-50 text-xs text-slate-500">
-                        <span>Toplam {history.length} ders kaydı bulundu</span>
+                        <span>Toplam {history.length} {config.labels.appointment.toLowerCase()} kaydı bulundu</span>
                         <div className="flex items-center gap-2">
                             <Button variant="outline" size="icon" className="h-8 w-8 bg-white" disabled>
                                 <ChevronLeft className="h-4 w-4" />
@@ -171,9 +174,9 @@ export function HistoryTable({ history }: HistoryTableProps) {
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Ders İptal Talebi</DialogTitle>
+                        <DialogTitle>{config.labels.appointment} İptal Talebi</DialogTitle>
                         <DialogDescription>
-                            Lütfen dersi iptal etme nedeninizi belirtiniz. Eğitmeniniz talebinizi inceleyecektir.
+                            Lütfen {config.labels.appointment.toLowerCase()}i iptal etme nedeninizi belirtiniz. Eğitmeniniz talebinizi inceleyecektir.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">

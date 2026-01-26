@@ -15,20 +15,22 @@ import {
     LogOut
 } from "lucide-react"
 import { UserButton, useUser } from "@clerk/nextjs"
+import { useOrganization } from "@/providers/organization-provider"
 
-const sidebarItems = [
-    { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-    { icon: Calendar, label: "Program", href: "/program" },
-    { icon: Users, label: "Üyeler", href: "/customers" },
-    { icon: Package, label: "Paketler", href: "/packages" },
-    { icon: BarChart3, label: "Raporlar", href: "/reports" },
-    { icon: Settings, label: "Ayarlar", href: "/settings" },
-
-]
 
 export function Sidebar({ role }: { role?: string }) {
     const pathname = usePathname()
     const { user } = useUser()
+    const { config, organization } = useOrganization()
+
+    const sidebarItems = [
+        { icon: LayoutDashboard, label: "Dashboard", href: "/" },
+        { icon: Calendar, label: config.labels.program, href: "/program" },
+        { icon: Users, label: config.labels.customer ? `${config.labels.customer}ler` : "Müşteriler", href: "/customers" },
+        { icon: Package, label: config.labels.package ? `${config.labels.package}ler` : "Paketler", href: "/packages" },
+        { icon: BarChart3, label: "Raporlar", href: "/reports" },
+        { icon: Settings, label: "Ayarlar", href: "/settings" },
+    ]
 
     // Filter items based on role
     const filteredItems = sidebarItems.filter(item => {
@@ -37,6 +39,14 @@ export function Sidebar({ role }: { role?: string }) {
         }
         return true
     })
+
+    const industryLabelMap: Record<string, string> = {
+        'pilates': 'PİLATES STÜDYOSU',
+        'hair': 'KUAFÖR YÖNETİMİ',
+        'dental': 'DİŞ KLİNİĞİ',
+        'general': 'İŞLETME YÖNETİMİ'
+    }
+    const industryLabel = industryLabelMap[organization?.industry_type || 'general'] || 'YÖNETİM PANELİ'
 
     return (
         <div className="w-64 border-r bg-white h-screen flex flex-col fixed left-0 top-0 overflow-y-auto z-10 transition-all duration-300">
@@ -49,7 +59,7 @@ export function Sidebar({ role }: { role?: string }) {
                     </svg>
                 </div>
                 <h1 className="font-bold text-xl text-slate-800 tracking-tight">YÖNETİM PANELİ</h1>
-                <p className="text-xs text-slate-400 font-medium">PİLATES STÜDYOSU</p>
+                <p className="text-xs text-slate-400 font-medium">{industryLabel}</p>
             </div>
 
             {/* Navigation */}
@@ -78,7 +88,7 @@ export function Sidebar({ role }: { role?: string }) {
                 <div className="text-xs font-semibold text-slate-400 mb-2 px-2">HIZLI İŞLEMLER</div>
                 <Button variant="outline" className="w-full justify-start gap-2 bg-slate-50 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-600">
                     <Plus className="h-4 w-4" />
-                    Yeni Ders Tanımla
+                    {config.labels.createAppointment}
                 </Button>
             </div>
 

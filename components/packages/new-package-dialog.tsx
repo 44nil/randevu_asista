@@ -11,13 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createPackage } from "@/app/package-actions"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
+import { useOrganization } from "@/providers/organization-provider"
 
 const formSchema = z.object({
-    name: z.string().min(2, { message: "Paket adı en az 2 karakter olmalıdır." }),
-    type: z.string().min(1, { message: "Lütfen bir paket türü seçin." }),
-    sessions: z.string().min(1, { message: "Seans sayısı giriniz." }),
+    name: z.string().optional(),
+    type: z.string().min(1, { message: "Lütfen bir tür seçin." }),
+    sessions: z.string().optional(),
     price: z.string().min(1, { message: "Fiyat giriniz." }),
-    duration_days: z.string().optional()
+    duration_days: z.string().optional(),
+    duration: z.string().min(1, { message: "Süre giriniz." })
 })
 
 interface NewPackageDialogProps {
@@ -25,31 +27,45 @@ interface NewPackageDialogProps {
 }
 
 export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
+    const { config } = useOrganization()
     const [loading, setLoading] = useState(false)
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             name: "",
-            type: "group",
-            sessions: "",
+            type: config.packageTypes?.[0]?.value || "hair_cut",
+            sessions: "1",
             price: "",
-            duration_days: "30"
+            duration_days: "365",
+            duration: "60"
         }
     })
+
+    const selectedType = form.watch("type")
+    const isPackage = selectedType === "package_deal" || selectedType === "care_package" || selectedType === "bridal_package"
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         try {
             setLoading(true)
+
+            // Determine name: user input OR label from type
+            let packageName = values.name
+            if (!packageName) {
+                const selectedTypeObj = config.packageTypes?.find(t => t.value === values.type)
+                packageName = selectedTypeObj?.label || "Hizmet"
+            }
+
             const result = await createPackage({
-                name: values.name,
-                credits: parseInt(values.sessions),
+                name: packageName,
+                credits: parseInt(values.sessions || "1"),
                 price: parseFloat(values.price),
-                validity_days: values.duration_days ? parseInt(values.duration_days) : 30
+                validity_days: values.duration_days ? parseInt(values.duration_days) : 365,
+                duration: parseInt(values.duration || "60")
             })
 
             if (result.success) {
-                toast.success("Paket oluşturuldu")
+                toast.success(`${config.labels.package} oluşturuldu`)
                 form.reset()
                 onSuccess()
             } else {
@@ -65,19 +81,21 @@ export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Paket Adı</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Örn: Başlangıç Paketi" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                {isPackage && (
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{config.labels.package} Adı</FormLabel>
+                                <FormControl>
+                                    <Input placeholder={`Örn: Başlangıç ${config.labels.package}`} {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                     <FormField
@@ -93,9 +111,16 @@ export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        <SelectItem value="group">Grup Reformer</SelectItem>
-                                        <SelectItem value="private">Özel Ders</SelectItem>
-                                        <SelectItem value="duo">Düet</SelectItem>
+                                        {config.packageTypes?.map(type => (
+                                            <SelectItem key={type.value} value={type.value}>
+                                                {type.label}
+                                            </SelectItem>
+                                        )) || (
+                                                <>
+                                                    <SelectItem value="group">Grup {config.labels.package}</SelectItem>
+                                                    <SelectItem value="private">Özel {config.labels.package}</SelectItem>
+                                                </>
+                                            )}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -103,14 +128,30 @@ export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
                         )}
                     />
 
+                    {isPackage && (
+                        <FormField
+                            control={form.control}
+                            name="sessions"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>{config.labels.session}</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="1" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
+
                     <FormField
                         control={form.control}
-                        name="sessions"
+                        name="duration"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Seans Sayısı</FormLabel>
+                                <FormLabel>Süre (Dakika)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" placeholder="8" {...field} />
+                                    <Input type="number" placeholder="60" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -133,24 +174,13 @@ export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
                         )}
                     />
 
-                    <FormField
-                        control={form.control}
-                        name="duration_days"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Geçerlilik (Gün)</FormLabel>
-                                <FormControl>
-                                    <Input type="number" placeholder="30" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                    {/* Hidden validty */}
+                    <input type="hidden" {...form.register("duration_days")} value="365" />
                 </div>
 
                 <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Paket Oluştur
+                    {config.labels.package} Oluştur
                 </Button>
             </form>
         </Form>

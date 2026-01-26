@@ -9,11 +9,14 @@ interface ActivePackageListProps {
     packages: any[]
 }
 
+import { useOrganization } from "@/providers/organization-provider"
+
 export function ActivePackageList({ packages }: ActivePackageListProps) {
+    const { config } = useOrganization()
     if (!packages || packages.length === 0) {
         return (
             <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed">
-                <p className="text-slate-500">Aktif paketiniz bulunmuyor.</p>
+                <p className="text-slate-500">Aktif {config.labels.package ? config.labels.package.toLowerCase() : 'hizmet'}iniz bulunmuyor.</p>
             </div>
         )
     }
@@ -42,7 +45,7 @@ export function ActivePackageList({ packages }: ActivePackageListProps) {
 
                             <div className="space-y-2 mb-4">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-slate-500">Kredi Kullanımı</span>
+                                    <span className="text-slate-500">{config.labels.package || 'Hizmet'} Kullanımı</span>
                                     <span className="font-bold text-slate-900">{used} / {total}</span>
                                 </div>
                                 <Progress value={progress} className="h-2" />
@@ -51,7 +54,7 @@ export function ActivePackageList({ packages }: ActivePackageListProps) {
                             <div className="flex justify-between items-center pt-4 border-t text-xs text-slate-500">
                                 <div className="flex items-center gap-1">
                                     <Package className="h-3 w-3" />
-                                    <span>{total - used} Seans Kalan</span>
+                                    <span>{total - used} {config.labels.session || 'Hak'} Kalan</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <Clock className="h-3 w-3" />

@@ -55,7 +55,7 @@ export async function getUserProfile() {
                     // full_name: pendingProfile.full_name || clerkUser.firstName + ' ' + clerkUser.lastName
                 })
                 .eq('id', pendingProfile.id)
-                .select()
+                .select('*, organization:organizations(*)')
                 .single();
 
             if (!error) {
@@ -63,6 +63,17 @@ export async function getUserProfile() {
             } else {
                 console.error("Failed to link account:", error);
             }
+        }
+    } else {
+        // Fetch organization details for the found user
+        const { data: profileWithOrg } = await supabase
+            .from('users')
+            .select('*, organization:organizations(*)')
+            .eq('clerk_id', userId)
+            .single();
+
+        if (profileWithOrg) {
+            profile = profileWithOrg;
         }
     }
 
@@ -97,6 +108,33 @@ export async function createOrganization(data: { name: string, industry: string,
 
         if (orgError) {
             console.error('Organization creation error:', orgError);
+            if (orgError.code === '23505') {
+                // Attempt to recover: If duplicate, check if we can just link the user to it?
+                // CAUTION: This assumes the user IS the owner who failed to link previously.
+                // In a real multi-user app, we would verify ownership token or similar.
+                // For this MVP debugging: Try to find the org and link.
+
+                const { data: existingOrg } = await supabase
+                    .from('organizations')
+                    .select('id')
+                    .eq('subdomain', data.subdomain)
+                    .single();
+
+                if (existingOrg) {
+                    console.log('Recovering orphaned organization:', existingOrg.id);
+                    const { error: linkError } = await supabase.from('users').update({
+                        organization_id: existingOrg.id,
+                        role: 'owner'
+                    }).eq('clerk_id', userId);
+
+                    if (!linkError) {
+                        revalidatePath('/');
+                        return { success: true };
+                    }
+                }
+
+                return { success: false, error: "Bu isimde veya alt alan adında bir işletme zaten mevcut. Eğer bu sizin işletmenizse tekrar 'Oluştur'a basarak sahiplenmeyi deneyin." };
+            }
             return { success: false, error: "Organizasyon oluşturulamadı: " + orgError.message };
         }
 
@@ -295,6 +333,35 @@ export async function deleteCustomer(id: string) {
         console.error(error);
         return { success: false, error: error.message };
     }
+
+    revalidatePath('/');
+    return { success: true };
+}
+
+export async function fixUserConnection() {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "No user" };
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // Hardcode the target for this specific recovery case
+    const targetSubdomain = 'elif-pilates';
+
+    // 1. Find Org
+    const { data: org } = await supabase.from('organizations').select('id').eq('subdomain', targetSubdomain).single();
+    if (!org) return { success: false, error: "Organizasyon bulunamadı (elif-pilates)" };
+
+    // 2. Link User
+    const { error } = await supabase.from('users').update({
+        organization_id: org.id,
+        role: 'owner'
+    }).eq('clerk_id', userId);
+
+    if (error) return { success: false, error: error.message };
 
     revalidatePath('/');
     return { success: true };

@@ -18,7 +18,10 @@ interface MainDashboardProps {
   role?: string
 }
 
+import { useOrganization } from "@/providers/organization-provider"
+
 export default function MainDashboard({ role }: MainDashboardProps) {
+  const { config } = useOrganization()
   const { user } = useUser()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -73,16 +76,16 @@ export default function MainDashboard({ role }: MainDashboardProps) {
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Hoş geldin, {user?.firstName} {isStaff ? "" : "Hanım"}</h2>
           <p className="text-slate-500 mt-1">
-            İşte {new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })} günü için stüdyo özetiniz ve programınız.
+            İşte {new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })} günü için {config.labels.package?.toLowerCase()} ve {config.labels.appointment?.toLowerCase()} özetiniz.
           </p>
         </div>
         {!isStaff && (
           <div className="flex gap-2">
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => router.push('/program')}>
-              + Ders Ekle
+              + {config.labels.createAppointment}
             </Button>
             <Button variant="outline" onClick={() => router.push('/customers')}>
-              + Müşteri Ekle
+              + {config.labels.createCustomer}
             </Button>
           </div>
         )}

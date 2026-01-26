@@ -40,6 +40,7 @@ export async function updateOrganizationSettings(data: {
     phone: string,
     email: string,
     address: string,
+    industry_type?: string,
     logo_url?: string
 }) {
     const { userId } = await getSession();
@@ -66,6 +67,7 @@ export async function updateOrganizationSettings(data: {
             phone: data.phone,
             email: data.email,
             address: data.address,
+            ...(data.industry_type ? { industry_type: data.industry_type } : {}),
             ...(data.logo_url ? { logo_url: data.logo_url } : {})
         })
         .eq('id', userData.organization_id);

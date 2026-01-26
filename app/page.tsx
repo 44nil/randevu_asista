@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useUser } from "@clerk/nextjs"
-import { OrganizationSetup } from "@/components/onboarding/organization-setup"
+
 import MainDashboard from "@/components/dashboard/main-dashboard"
 import { CustomerDashboard } from "@/components/customer-portal/customer-dashboard"
 import { getUserProfile } from "./actions"
@@ -25,9 +25,18 @@ export default function Home() {
 
         getUserProfile().then((profile) => {
             setUserProfile(profile)
+        }).catch((err) => {
+            console.error("Profile load error:", err)
+        }).finally(() => {
             setLoading(false)
         })
     }, [user, isLoaded, router])
+
+    useEffect(() => {
+        if (!loading && isLoaded && userProfile && !userProfile.organization_id) {
+            router.push("/onboarding")
+        }
+    }, [loading, isLoaded, userProfile, router])
 
     if (!isLoaded || loading) {
         return (
@@ -37,10 +46,13 @@ export default function Home() {
         )
     }
 
-    // If user doesn't have an organization AND not a customer (customers usually invited to existing org)
-    // But for MVP, if profile exists and has org_id, we check role.
+    // If user doesn't have an organization, show loader while redirecting (handled by useEffect above)
     if (!userProfile || !userProfile.organization_id) {
-        return <OrganizationSetup />
+        return (
+            <div className="flex h-screen items-center justify-center bg-slate-50">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+        )
     }
 
     // Role Based Rendering

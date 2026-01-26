@@ -20,18 +20,30 @@ export const metadata: Metadata = {
 
 import { Toaster } from "@/components/ui/sonner"
 
-export default function RootLayout({
+import { getUserProfile } from "@/app/actions";
+import { OrganizationProvider } from "@/providers/organization-provider";
+import { AuthCheck } from "@/components/auth-check";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const profile = await getUserProfile();
+
   return (
     <ClerkProvider>
       <html lang="en">
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          {children}
+          <OrganizationProvider organization={profile?.organization || null}>
+            <AuthCheck
+              userId={profile?.clerk_id}
+              hasOrganization={!!profile?.organization_id}
+            />
+            {children}
+          </OrganizationProvider>
           <Toaster />
         </body>
       </html>

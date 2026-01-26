@@ -13,7 +13,10 @@ interface DailyScheduleProps {
     data: any[]
 }
 
+import { useOrganization } from "@/providers/organization-provider"
+
 export function DailySchedule({ data }: DailyScheduleProps) {
+    const { config } = useOrganization()
     const [selectedItem, setSelectedItem] = useState<any | null>(null)
     const [detailOpen, setDetailOpen] = useState(false)
 
@@ -21,13 +24,13 @@ export function DailySchedule({ data }: DailyScheduleProps) {
         return (
             <Card className="col-span-1 lg:col-span-2 h-fit">
                 <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg font-bold">Bugünkü Ders Programı</CardTitle>
+                    <CardTitle className="text-lg font-bold">Bugünkü {config.labels.appointment} Programı</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="py-12 flex flex-col items-center justify-center text-slate-500 gap-4">
                         <Calendar className="h-12 w-12 opacity-20" />
-                        <p>Bugün için planlanmış ders bulunmuyor.</p>
-                        <Button variant="outline" className="mt-2">Ders Ekle</Button>
+                        <p>Bugün için planlanmış {config.labels.appointment.toLowerCase()} bulunmuyor.</p>
+                        <Button variant="outline" className="mt-2">{config.labels.createAppointment}</Button>
                     </div>
                 </CardContent>
             </Card>
@@ -58,7 +61,7 @@ export function DailySchedule({ data }: DailyScheduleProps) {
     return (
         <Card className="col-span-1 lg:col-span-2 h-fit">
             <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg font-bold">Bugünkü Ders Programı</CardTitle>
+                <CardTitle className="text-lg font-bold">Bugünkü {config.labels.appointment} Programı</CardTitle>
                 <div className="flex gap-2">
                     <Button variant="outline" size="icon" className="h-8 w-8">
                         <ChevronLeft className="h-4 w-4" />
@@ -105,7 +108,7 @@ export function DailySchedule({ data }: DailyScheduleProps) {
                                             : item.groupedCustomers.join(", ")}
                                     </h4>
                                     <p className="text-sm text-slate-500">
-                                        {item.service_id || "Genel Seans"} • {isGroup ? 'Grup Dersi' : 'Özel Ders'}
+                                        {item.service_id || `Genel ${config.labels.session}`} • {isGroup ? `Grup ${config.labels.appointment}i` : `Özel ${config.labels.appointment}`}
                                     </p>
                                 </div>
 
@@ -135,7 +138,7 @@ export function DailySchedule({ data }: DailyScheduleProps) {
             <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Ders Detayları</DialogTitle>
+                        <DialogTitle>{config.labels.appointment} Detayları</DialogTitle>
                     </DialogHeader>
                     {selectedItem && (
                         <div className="space-y-6 pt-4">
@@ -145,7 +148,7 @@ export function DailySchedule({ data }: DailyScheduleProps) {
                                 </div>
                                 <div>
                                     <h4 className="text-lg font-bold text-slate-900">
-                                        {selectedItem.service_id || "Genel Seans"}
+                                        {selectedItem.service_id || `Genel ${config.labels.session}`}
                                     </h4>
                                     <p className="text-sm text-slate-500 flex items-center gap-2">
                                         <Clock className="h-3 w-3" />

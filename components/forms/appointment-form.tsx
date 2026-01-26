@@ -20,13 +20,15 @@ import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 
+import { useOrganization } from "@/providers/organization-provider"
+
 const appointmentFormSchema = z.object({
-    title: z.string().min(2, "Ders adı en az 2 karakter olmalıdır"),
+    title: z.string().min(2, "Başlık en az 2 karakter olmalıdır"),
     customer_ids: z.array(z.string()), // Optional - can be empty
     appointment_date: z.date(),
     time: z.string().min(1, "Saat seçiniz"),
     duration: z.string(),
-    type: z.enum(["reformer", "mat", "private"]),
+    type: z.string().min(1, "Tip seçiniz"),
     max_attendees: z.string(),
     is_recurring: z.boolean(),
     recurring_weeks: z.string().optional()
@@ -40,6 +42,7 @@ interface AppointmentFormProps {
 }
 
 export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps) {
+    const { config } = useOrganization()
     const [customers, setCustomers] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
     const [mounted, setMounted] = useState(false)
@@ -61,7 +64,7 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
         defaultValues: {
             title: "",
             duration: "60",
-            type: "private",
+            type: config.appointmentTypes?.[0]?.value || "standard",
             max_attendees: "1",
             appointment_date: defaultDate || new Date(),
             time: "09:00",
@@ -129,7 +132,7 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
             if (result.success) {
                 toast.success(data.is_recurring
                     ? `${parseInt(data.recurring_weeks || "0")} haftalık program oluşturuldu`
-                    : "Ders oluşturuldu"
+                    : `${config.labels.appointment} oluşturuldu`
                 )
                 form.reset()
                 if (onSuccess) onSuccess()
@@ -153,9 +156,9 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                     name="title"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Ders Başlığı</FormLabel>
+                            <FormLabel>{config.labels.appointment} Başlığı</FormLabel>
                             <FormControl>
-                                <Input placeholder="Örn: Başlangıç Reformer" {...field} />
+                                <Input placeholder={`Örn: ${config.labels.appointment} 1`} {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -168,7 +171,7 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                         name="type"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Ders Tipi</FormLabel>
+                                <FormLabel>{config.labels.appointment} Tipi</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
                                         <SelectTrigger>
@@ -176,9 +179,11 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        <SelectItem value="reformer">Reformer</SelectItem>
-                                        <SelectItem value="mat">Mat Pilates</SelectItem>
-                                        <SelectItem value="private">Özel Ders</SelectItem>
+                                        {config.appointmentTypes?.map(type => (
+                                            <SelectItem key={type.value} value={type.value}>
+                                                {type.label}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -191,7 +196,7 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                         <Select onValueChange={handleAddCustomer}>
                             <FormControl>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Üye Seç (+)" />
+                                    <SelectValue placeholder={`${config.labels.customer} Seç (+)`} />
                                 </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -221,7 +226,7 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                                 )
                             })}
                             {selectedCustomerIds.length === 0 && (
-                                <p className="text-xs text-slate-400 italic">Katılımcı eklemeden ders oluşturabilirsiniz. Müşteriler rezervasyon yapabilir.</p>
+                                <p className="text-xs text-slate-400 italic">Katılımcı eklemeden {config.labels.appointment.toLowerCase()} oluşturabilirsiniz. {config.labels.customer}ler rezervasyon yapabilir.</p>
                             )}
                         </div>
                         <FormMessage>{form.formState.errors.customer_ids?.message}</FormMessage>
@@ -384,7 +389,7 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                     disabled={loading}
                     onClick={() => console.log('🔘 Submit button clicked!')}
                 >
-                    {loading ? "Planlanıyor..." : "Dersi Oluştur"}
+                    {loading ? "Planlanıyor..." : `${config.labels.appointment} Oluştur`}
                 </Button>
             </form>
         </Form >
