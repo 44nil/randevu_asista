@@ -2,22 +2,13 @@
 
 import { revalidatePath } from "next/cache"
 import { getSession } from "./actions"
+import { supabaseAdmin } from "@/lib/supabaseAdmin"
 
 export async function getAppointments(startDate?: string, endDate?: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, data: [], error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
-        }
-    );
+    const supabase = supabaseAdmin;
 
     const { data: userData } = await supabase
         .from('users')
@@ -78,17 +69,7 @@ export async function createClassSession(data: {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
-        }
-    );
+    const supabase = supabaseAdmin;
 
     // Get Staff/Org info
     const { data: userData } = await supabase

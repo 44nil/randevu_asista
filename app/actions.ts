@@ -3,65 +3,56 @@
 import { createSupabaseClient } from "@/lib/supabaseClient";
 import { auth } from '@clerk/nextjs/server';
 import { revalidatePath } from "next/cache";
+import { cache } from "react";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function getSession() {
     const { userId, getToken } = await auth();
     return { userId, getToken };
 }
 
-export async function getUserProfile() {
+export const getUserProfile = cache(async () => {
     const { userId } = await getSession();
     if (!userId) return null;
 
-    // Get current user details from Clerk to check against pending invites
-    const { currentUser } = await import('@clerk/nextjs/server');
-    const clerkUser = await currentUser();
-    const userEmail = clerkUser?.emailAddresses[0]?.emailAddress;
-
-    // Use Service Role Key for admin operations
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
-        }
-    );
+    const supabase = supabaseAdmin;
 
     // 1. Try to find by Clerk ID
     let { data: profile } = await supabase.from('users').select('*').eq('clerk_id', userId).single();
 
     // 2. If not found by ID, but we have an email, try to find by email (Claim Account Logic)
-    if (!profile && userEmail) {
-        // Look for any user with this email (Staff or Customer placeholder)
-        const { data: pendingProfile } = await supabase
-            .from('users')
-            .select('*')
-            .eq('email', userEmail)
-            .single();
+    if (!profile) {
+        // Only fetch current user from Clerk if we didn't find a profile by ID
+        const { currentUser } = await import('@clerk/nextjs/server');
+        const clerkUser = await currentUser();
+        const userEmail = clerkUser?.emailAddresses[0]?.emailAddress;
 
-        if (pendingProfile) {
-            console.log(`Linking pending account ${pendingProfile.id} for email ${userEmail} to Clerk ID ${userId}`);
-
-            // Link the pending account to the real Clerk ID
-            const { data: updatedProfile, error } = await supabase
+        if (userEmail) {
+            // Look for any user with this email (Staff or Customer placeholder)
+            const { data: pendingProfile } = await supabase
                 .from('users')
-                .update({
-                    clerk_id: userId,
-                    // Optionally sync name from Clerk if missing in DB
-                    // full_name: pendingProfile.full_name || clerkUser.firstName + ' ' + clerkUser.lastName
-                })
-                .eq('id', pendingProfile.id)
-                .select('*, organization:organizations(*)')
+                .select('*')
+                .eq('email', userEmail)
                 .single();
 
-            if (!error) {
-                profile = updatedProfile;
-            } else {
-                console.error("Failed to link account:", error);
+            if (pendingProfile) {
+                console.log(`Linking pending account ${pendingProfile.id} for email ${userEmail} to Clerk ID ${userId}`);
+
+                // Link the pending account to the real Clerk ID
+                const { data: updatedProfile, error } = await supabase
+                    .from('users')
+                    .update({
+                        clerk_id: userId,
+                    })
+                    .eq('id', pendingProfile.id)
+                    .select('*, organization:organizations(*)')
+                    .single();
+
+                if (!error) {
+                    profile = updatedProfile;
+                } else {
+                    console.error("Failed to link account:", error);
+                }
             }
         }
     } else {
@@ -78,25 +69,14 @@ export async function getUserProfile() {
     }
 
     return profile;
-}
+});
 
 export async function createOrganization(data: { name: string, industry: string, subdomain: string }) {
     try {
         const { userId } = await getSession();
         if (!userId) return { success: false, error: "Unauthorized - No user ID" };
 
-        // Use Service Role Key for admin operations
-        const { createClient } = await import('@supabase/supabase-js');
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!,
-            {
-                auth: {
-                    autoRefreshToken: false,
-                    persistSession: false
-                }
-            }
-        );
+        const supabase = supabaseAdmin;
 
         // 1. Create Organization
         const { data: org, error: orgError } = await supabase.from('organizations').insert({
@@ -191,18 +171,7 @@ export async function createCustomer(data: any) {
         return { success: false, error: "Unauthorized" };
     }
 
-    // Use Service Role Key for admin operations
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
-        }
-    );
+    const supabase = supabaseAdmin;
 
     // Get current user's organization
     const { data: userData, error: userError } = await supabase
@@ -236,17 +205,7 @@ export async function getCustomers() {
     const { userId } = await getSession();
     if (!userId) return { success: false, data: [], error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
-        }
-    );
+    const supabase = supabaseAdmin;
 
     // Get user's organization
     const { data: userData } = await supabase
@@ -277,17 +236,7 @@ export async function updateCustomer(id: string, data: any) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
-        }
-    );
+    const supabase = supabaseAdmin;
 
     const { error } = await supabase
         .from('customers')
@@ -312,17 +261,7 @@ export async function deleteCustomer(id: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
-        }
-    );
+    const supabase = supabaseAdmin;
 
     const { error } = await supabase
         .from('customers')
@@ -342,11 +281,7 @@ export async function fixUserConnection() {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "No user" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = supabaseAdmin;
 
     // Hardcode the target for this specific recovery case
     const targetSubdomain = 'elif-pilates';

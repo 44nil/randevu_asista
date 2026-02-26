@@ -1,53 +1,33 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
-
-import MainDashboard from "@/components/dashboard/main-dashboard"
-import { CustomerDashboard } from "@/components/customer-portal/customer-dashboard"
-import { getUserProfile } from "./actions"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 
+import MainDashboard from "@/components/dashboard/main-dashboard"
+import { CustomerDashboard } from "@/components/customer-portal/customer-dashboard"
+import { useOrganization } from "@/providers/organization-provider"
+
 export default function Home() {
-    const { user, isLoaded } = useUser()
+    const { user: clerkUser, isLoaded } = useUser()
     const router = useRouter()
-    const [userProfile, setUserProfile] = useState<any>(null)
-    const [loading, setLoading] = useState(true)
+    const { organization, user: profile, isLoading: isOrgLoading } = useOrganization()
 
     useEffect(() => {
         if (!isLoaded) return
 
-        if (!user) {
+        if (!clerkUser) {
             router.push("/sign-in")
             return
         }
 
-        getUserProfile().then((profile) => {
-            setUserProfile(profile)
-        }).catch((err) => {
-            console.error("Profile load error:", err)
-        }).finally(() => {
-            setLoading(false)
-        })
-    }, [user, isLoaded, router])
-
-    useEffect(() => {
-        if (!loading && isLoaded && userProfile && !userProfile.organization_id) {
+        if (!isOrgLoading && !organization) {
             router.push("/onboarding")
         }
-    }, [loading, isLoaded, userProfile, router])
+    }, [clerkUser, isLoaded, organization, isOrgLoading, router])
 
-    if (!isLoaded || loading) {
-        return (
-            <div className="flex h-screen items-center justify-center bg-slate-50">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            </div>
-        )
-    }
-
-    // If user doesn't have an organization, show loader while redirecting (handled by useEffect above)
-    if (!userProfile || !userProfile.organization_id) {
+    if (!isLoaded || isOrgLoading) {
         return (
             <div className="flex h-screen items-center justify-center bg-slate-50">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -56,10 +36,10 @@ export default function Home() {
     }
 
     // Role Based Rendering
-    if (userProfile.role === 'customer') {
+    if (profile?.role === 'customer') {
         return <CustomerDashboard />
     }
 
     // Default to Admin/Owner Dashboard
-    return <MainDashboard role={userProfile.role} />
+    return <MainDashboard role={profile?.role} />
 }

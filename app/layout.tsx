@@ -37,7 +37,10 @@ export default async function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          <OrganizationProvider organization={profile?.organization || null}>
+          <OrganizationProvider
+            organization={profile?.organization || null}
+            user={profile ? { id: profile.id, role: profile.role, full_name: profile.full_name } : null}
+          >
             <AuthCheck
               userId={profile?.clerk_id}
               hasOrganization={!!profile?.organization_id}

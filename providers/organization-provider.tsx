@@ -11,14 +11,22 @@ interface Organization {
     settings?: any
 }
 
+interface UserProfile {
+    id: string
+    role: 'admin' | 'owner' | 'staff' | 'customer'
+    full_name?: string
+}
+
 interface OrganizationContextType {
     organization: Organization | null
+    user: UserProfile | null
     config: IndustryConfig
     isLoading: boolean
 }
 
 const OrganizationContext = createContext<OrganizationContextType>({
     organization: null,
+    user: null,
     config: getIndustryConfig('general'),
     isLoading: true
 })
@@ -26,14 +34,16 @@ const OrganizationContext = createContext<OrganizationContextType>({
 interface OrganizationProviderProps {
     children: ReactNode
     organization: Organization | null
+    user: UserProfile | null
 }
 
-export function OrganizationProvider({ children, organization }: OrganizationProviderProps) {
+export function OrganizationProvider({ children, organization, user }: OrganizationProviderProps) {
     const config = getIndustryConfig(organization?.industry_type)
 
     return (
         <OrganizationContext.Provider value={{
             organization,
+            user,
             config,
             isLoading: false
         }}>
