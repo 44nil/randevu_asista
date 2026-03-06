@@ -14,8 +14,7 @@ import { Loader2 } from "lucide-react"
 import { useOrganization } from "@/providers/organization-provider"
 
 const formSchema = z.object({
-    name: z.string().optional(),
-    type: z.string().min(1, { message: "Lütfen bir tür seçin." }),
+    name: z.string().min(1, { message: "Lütfen bir ad girin." }),
     sessions: z.string().optional(),
     price: z.string().min(1, { message: "Fiyat giriniz." }),
     duration_days: z.string().optional(),
@@ -34,7 +33,6 @@ export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
         resolver: zodResolver(formSchema),
         defaultValues: {
             name: "",
-            type: config.packageTypes?.[0]?.value || "hair_cut",
             sessions: "1",
             price: "",
             duration_days: "365",
@@ -42,22 +40,14 @@ export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
         }
     })
 
-    const selectedType = form.watch("type")
-    const isPackage = selectedType === "package_deal" || selectedType === "care_package" || selectedType === "bridal_package"
+    const isPackage = true // We can treat all as packages/services for now or simplify.
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         try {
             setLoading(true)
 
-            // Determine name: user input OR label from type
-            let packageName = values.name
-            if (!packageName) {
-                const selectedTypeObj = config.packageTypes?.find(t => t.value === values.type)
-                packageName = selectedTypeObj?.label || "Hizmet"
-            }
-
             const result = await createPackage({
-                name: packageName,
+                name: values.name,
                 credits: parseInt(values.sessions || "1"),
                 price: parseFloat(values.price),
                 validity_days: values.duration_days ? parseInt(values.duration_days) : 365,
@@ -81,48 +71,27 @@ export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                {isPackage && (
+                <div className="grid grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
                         name="name"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>{config.labels.package} Adı</FormLabel>
+                                <FormLabel>{config.labels.package || 'Tedavi'} Adı</FormLabel>
                                 <FormControl>
-                                    <Input placeholder={`Örn: Başlangıç ${config.labels.package}`} {...field} />
+                                    <div className="relative">
+                                        <Input
+                                            list="package-types"
+                                            placeholder={`Örn: Standart ${config.labels.package || 'Tedavi'}`}
+                                            {...field}
+                                        />
+                                        <datalist id="package-types">
+                                            {config.packageTypes?.map(type => (
+                                                <option key={type.value} value={type.label} />
+                                            ))}
+                                        </datalist>
+                                    </div>
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="type"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Tür</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Tür seçin" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {config.packageTypes?.map(type => (
-                                            <SelectItem key={type.value} value={type.value}>
-                                                {type.label}
-                                            </SelectItem>
-                                        )) || (
-                                                <>
-                                                    <SelectItem value="group">Grup {config.labels.package}</SelectItem>
-                                                    <SelectItem value="private">Özel {config.labels.package}</SelectItem>
-                                                </>
-                                            )}
-                                    </SelectContent>
-                                </Select>
                                 <FormMessage />
                             </FormItem>
                         )}

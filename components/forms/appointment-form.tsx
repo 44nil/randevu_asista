@@ -158,7 +158,7 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                         <FormItem>
                             <FormLabel>{config.labels.appointment} Başlığı</FormLabel>
                             <FormControl>
-                                <Input placeholder={`Örn: ${config.labels.appointment} 1`} {...field} />
+                                <Input placeholder={`Örn: ${config.labels.appointment} - Muayene`} {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -226,7 +226,7 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                                 )
                             })}
                             {selectedCustomerIds.length === 0 && (
-                                <p className="text-xs text-slate-400 italic">Katılımcı eklemeden {config.labels.appointment.toLowerCase()} oluşturabilirsiniz. {config.labels.customer}ler rezervasyon yapabilir.</p>
+                                <p className="text-xs text-slate-400 italic">Katılımcı eklemeden {config.labels.appointment.toLowerCase()} oluşturabilirsiniz. {config.labels.customer}ler randevu alabilir.</p>
                             )}
                         </div>
                         <FormMessage>{form.formState.errors.customer_ids?.message}</FormMessage>
@@ -327,19 +327,21 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                             </FormItem>
                         )}
                     />
-                    <FormField
-                        control={form.control}
-                        name="max_attendees"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Kontenjan</FormLabel>
-                                <FormControl>
-                                    <Input type="number" min="1" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                    {config.features.classes && (
+                        <FormField
+                            control={form.control}
+                            name="max_attendees"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Kontenjan</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" min="1" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
                 </div>
 
                 {/* Recurring Options */}

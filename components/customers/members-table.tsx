@@ -90,7 +90,7 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
                 <div className="relative w-full sm:w-64">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Üye ara..."
+                        placeholder={`${config.labels.customer} ara...`}
                         className="pl-8"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -133,7 +133,7 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    {member.activePackage !== "Paket Yok" ? (
+                                    {member.activePackage && member.activePackage !== "Paket Yok" ? (
                                         <Badge variant="secondary" className="font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border-none">
                                             {member.activePackage}
                                         </Badge>
@@ -144,7 +144,7 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
                                     )}
                                 </TableCell>
                                 <TableCell>
-                                    {member.activePackage !== "Paket Yok" && (
+                                    {member.activePackage && member.activePackage !== "Paket Yok" && (
                                         <div className="space-y-1.5">
                                             <div className="flex justify-between text-xs font-medium">
                                                 <span className={cn(
@@ -193,7 +193,7 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
                                             size="icon"
                                             variant="ghost"
                                             className="h-8 w-8 text-green-600 bg-green-50 hover:bg-green-100 hover:text-green-700 rounded-lg"
-                                            title="Paket Tanımla"
+                                            title={`${config.labels.package || 'Paket'} Tanımla`}
                                         >
                                             <PackagePlus className="h-4 w-4" />
                                         </Button>
@@ -221,7 +221,7 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
 
             {/* Pagination Placeholder */}
             <div className="flex items-center justify-between text-sm text-muted-foreground px-2">
-                <div>Toplam {filteredData.length} üyeden 1-10 arası gösteriliyor</div>
+                <div>Toplam {filteredData.length} {config.labels.customer.toLowerCase()}den 1-10 arası gösteriliyor</div>
                 <div className="flex gap-1">
                     <Button variant="outline" size="icon" className="h-8 w-8" disabled>{'<'}</Button>
                     <Button variant="default" size="icon" className="h-8 w-8 bg-blue-600">1</Button>

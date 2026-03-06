@@ -25,7 +25,7 @@ export function AuthCheck({
 
         // Eğer organizasyonu VARSA ve onboarding sayfasındaysa
         if (hasOrganization && isOnboardingPage) {
-            router.push('/dashboard');
+            router.push('/');
         }
     }, [hasOrganization, userId, pathname, router]);
 

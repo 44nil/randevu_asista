@@ -44,6 +44,7 @@ export async function createPackage(data: {
             description: data.description,
             price: data.price,
             credits: data.credits,
+            sessions: data.credits, // Fix: Adding required 'sessions' column mapping
             validity_days: data.validity_days,
             duration_minutes: data.duration || 60
         })

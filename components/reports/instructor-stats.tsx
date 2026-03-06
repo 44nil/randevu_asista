@@ -3,23 +3,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useOrganization } from "@/providers/organization-provider"
 
 interface InstructorStatsProps {
     data: { name: string, classes: number, hours: number }[]
 }
 
 export function InstructorStats({ data }: InstructorStatsProps) {
+    const { config } = useOrganization()
+
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Eğitmen Performansı</CardTitle>
+                <CardTitle>{config.labels.instructor} Performansı</CardTitle>
             </CardHeader>
             <CardContent>
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Eğitmen</TableHead>
-                            <TableHead className="text-right">Verilen Ders</TableHead>
+                            <TableHead>{config.labels.instructor}</TableHead>
+                            <TableHead className="text-right">Verilen {config.labels.appointment}</TableHead>
                             <TableHead className="text-right">Toplam Saat</TableHead>
                         </TableRow>
                     </TableHeader>

@@ -52,8 +52,8 @@ export function CustomersClient({ role, initialMembers, initialStats }: Customer
 
     return (
         <DashboardLayout
-            title={`${config.labels.customer} ve Paket Yönetimi`}
-            subtitle={`Tüm ${config.labels.customer.toLowerCase()}lerin aktif paketlerini ve kalan haklarını buradan takip edebilirsiniz.`}
+            title={`${config.labels.customer} ve ${config.labels.package || 'Paket'} Yönetimi`}
+            subtitle={`Tüm kişilerin aktif ${config.features?.packages === false && config.labels.package ? config.labels.package.toLowerCase() + 'lerini' : 'paketlerini/tedavilerini'} ve kalan haklarını buradan takip edebilirsiniz.`}
             role={role}
             headerAction={
                 (role !== 'staff') ? (

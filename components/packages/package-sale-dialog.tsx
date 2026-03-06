@@ -8,6 +8,7 @@ import { getPackages, sellPackage } from "@/app/package-actions"
 import { toast } from "sonner"
 import { Loader2, CreditCard } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
+import { useOrganization } from "@/providers/organization-provider"
 
 interface PackageSaleDialogProps {
     customer: { id: string, name: string } | null
@@ -17,6 +18,7 @@ interface PackageSaleDialogProps {
 }
 
 export function PackageSaleDialog({ customer, open, onOpenChange, onSuccess }: PackageSaleDialogProps) {
+    const { config } = useOrganization()
     const [loading, setLoading] = useState(false)
     const [packages, setPackages] = useState<any[]>([])
     const [selectedPackageId, setSelectedPackageId] = useState<string>("")
@@ -46,7 +48,7 @@ export function PackageSaleDialog({ customer, open, onOpenChange, onSuccess }: P
             const result = await sellPackage(customer.id, selectedPackageId)
 
             if (result.success) {
-                toast.success("Paket satışı başarıyla gerçekleşti")
+                toast.success(`${config.labels.package || 'Paket'} satışı başarıyla gerçekleşti`)
                 onSuccess()
                 onOpenChange(false)
                 setSelectedPackageId("")
@@ -66,18 +68,18 @@ export function PackageSaleDialog({ customer, open, onOpenChange, onSuccess }: P
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Paket Satışı Yap</DialogTitle>
+                    <DialogTitle>{config.labels.package || 'Paket'} Satışı Yap</DialogTitle>
                     <DialogDescription>
-                        <strong>{customer?.name}</strong> adlı üyeye paket tanımlayın.
+                        <strong>{customer?.name}</strong> adlı kişi için {config.labels.package?.toLowerCase() || 'paket'} tanımlayın.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="py-4 space-y-4">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Paket Seçimi</label>
+                        <label className="text-sm font-medium">{config.labels.package || 'Paket'} Seçimi</label>
                         <Select value={selectedPackageId} onValueChange={setSelectedPackageId}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Paket seçiniz" />
+                                <SelectValue placeholder={`${config.labels.package || 'Paket'} seçiniz`} />
                             </SelectTrigger>
                             <SelectContent>
                                 {fetchingPackages ? (
@@ -87,7 +89,7 @@ export function PackageSaleDialog({ customer, open, onOpenChange, onSuccess }: P
                                 ) : (
                                     packages.map((pkg) => (
                                         <SelectItem key={pkg.id} value={pkg.id}>
-                                            {pkg.name} ({pkg.credits} Ders)
+                                            {pkg.name} ({pkg.credits} {config.labels.session || 'Seans'})
                                         </SelectItem>
                                     ))
                                 )}

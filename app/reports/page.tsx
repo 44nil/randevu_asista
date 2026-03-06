@@ -74,7 +74,7 @@ export default function ReportsPage() {
             <DashboardLayout title="Erişim Engellendi">
                 <div className="flex h-96 flex-col items-center justify-center gap-4 text-center">
                     <h2 className="text-xl font-semibold text-slate-800">Bu sayfaya erişim yetkiniz yok.</h2>
-                    <p className="text-slate-500">Raporları sadece stüdyo yöneticileri görüntüleyebilir.</p>
+                    <p className="text-slate-500">Raporları sadece yönetici yetkisine sahip kullanıcılar görüntüleyebilir.</p>
                 </div>
             </DashboardLayout>
         )
@@ -109,7 +109,7 @@ export default function ReportsPage() {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Verilen {config.labels.appointment}ler</CardTitle>
+                            <CardTitle className="text-sm font-medium">Verilen {config.labels.appointment}lar</CardTitle>
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -119,7 +119,7 @@ export default function ReportsPage() {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Aktif Eğitmen</CardTitle>
+                            <CardTitle className="text-sm font-medium">Aktif {config.labels.instructor}</CardTitle>
                             <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -133,7 +133,7 @@ export default function ReportsPage() {
                 <Tabs defaultValue="revenue" className="space-y-4">
                     <TabsList>
                         <TabsTrigger value="revenue">Gelir Analizi</TabsTrigger>
-                        <TabsTrigger value="instructors">Eğitmen Performansı</TabsTrigger>
+                        <TabsTrigger value="instructors">{config.labels.instructor} Performansı</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="revenue" className="space-y-4">

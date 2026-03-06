@@ -9,8 +9,11 @@ import { Plus, Edit, Trash2, Shield, User } from "lucide-react"
 import { getStaffList, deleteStaff } from "@/app/staff-actions"
 import { StaffDialog } from "./staff-dialog"
 import { toast } from "sonner"
+import { useOrganization } from "@/providers/organization-provider"
 
 export function StaffList() {
+    const { config } = useOrganization()
+
     interface Staff {
         id: string
         full_name: string
@@ -52,10 +55,10 @@ export function StaffList() {
     }
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Eğitmeni silmek istediğinizden emin misiniz?")) return
+        if (!confirm(`Bu ${config.labels.instructor.toLowerCase()}i silmek istediğinizden emin misiniz?`)) return
         const res = await deleteStaff(id)
         if (res.success) {
-            toast.success("Eğitmen silindi")
+            toast.success(`${config.labels.instructor} silindi`)
             loadStaff()
         } else {
             toast.error("Hata", { description: res.error })
@@ -67,11 +70,11 @@ export function StaffList() {
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                     <CardTitle>Ekip Yönetimi</CardTitle>
-                    <CardDescription>Eğitmenleri ve yöneticileri buradan yönetebilirsiniz.</CardDescription>
+                    <CardDescription>{config.labels.instructor}leri ve diğer personelleri buradan yönetebilirsiniz.</CardDescription>
                 </div>
                 <Button onClick={handleCreate} size="sm">
                     <Plus className="mr-2 h-4 w-4" />
-                    Eğitmen Ekle
+                    Yeni {config.labels.instructor}
                 </Button>
             </CardHeader>
             <CardContent>
@@ -90,7 +93,7 @@ export function StaffList() {
                                         <div className="text-xs text-slate-500">{s.email}</div>
                                     </div>
                                     <Badge variant={s.role === 'owner' ? 'default' : s.role === 'admin' ? 'secondary' : 'outline'}>
-                                        {s.role === 'owner' ? 'Kurucu' : s.role === 'admin' ? 'Yönetici' : 'Eğitmen'}
+                                        {s.role === 'owner' ? 'Kurucu' : s.role === 'admin' ? 'Yönetici' : config.labels.instructor}
                                     </Badge>
                                     {s.clerk_id.startsWith('pending_') && (
                                         <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">

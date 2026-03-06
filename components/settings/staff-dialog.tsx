@@ -17,7 +17,10 @@ interface StaffDialogProps {
     onSuccess: () => void
 }
 
+import { useOrganization } from "@/providers/organization-provider"
+
 export function StaffDialog({ staff, open, onOpenChange, onSuccess }: StaffDialogProps) {
+    const { config } = useOrganization()
     const [loading, setLoading] = useState(false)
     const [formData, setFormData] = useState({
         full_name: "",
@@ -63,7 +66,7 @@ export function StaffDialog({ staff, open, onOpenChange, onSuccess }: StaffDialo
             }
 
             if (res.success) {
-                toast.success(staff ? "Eğitmen güncellendi" : "Eğitmen eklendi")
+                toast.success(staff ? `${config.labels.instructor} güncellendi` : `${config.labels.instructor} eklendi`)
                 onSuccess()
                 onOpenChange(false)
             } else {
@@ -80,7 +83,7 @@ export function StaffDialog({ staff, open, onOpenChange, onSuccess }: StaffDialo
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>{staff ? "Eğitmeni Düzenle" : "Yeni Eğitmen Ekle"}</DialogTitle>
+                    <DialogTitle>{staff ? `${config.labels.instructor} Düzenle` : `Yeni ${config.labels.instructor} Ekle`}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
@@ -100,7 +103,7 @@ export function StaffDialog({ staff, open, onOpenChange, onSuccess }: StaffDialo
                             required
                             disabled={!!staff} // Email cannot be changed for sync reasons usually
                         />
-                        {!staff && <p className="text-xs text-muted-foreground">Eğitmen bu e-posta adresiyle giriş yapabilecek.</p>}
+                        {!staff && <p className="text-xs text-muted-foreground">Personel bu e-posta adresiyle giriş yapabilecek.</p>}
                     </div>
                     <div className="space-y-2">
                         <Label>Rol</Label>
@@ -112,7 +115,7 @@ export function StaffDialog({ staff, open, onOpenChange, onSuccess }: StaffDialo
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="staff">Eğitmen</SelectItem>
+                                <SelectItem value="staff">{config.labels.instructor}</SelectItem>
                                 <SelectItem value="admin">Yönetici</SelectItem>
                             </SelectContent>
                         </Select>

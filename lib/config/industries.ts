@@ -10,6 +10,7 @@ export interface IndustryConfig {
         program: string; // e.g. "Haftalık Program", "Randevu Takvimi"
         package: string; // e.g. "Paket", "Hizmet"
         session: string; // e.g. "Seans", "Randevu Hakkı"
+        instructor: string; // e.g. "Eğitmen", "Hekim", "Uzman"
     };
     appointmentTypes: { value: string; label: string }[];
     packageTypes: { value: string; label: string }[];
@@ -29,7 +30,8 @@ export const INDUSTRY_CONFIG: Record<IndustryType, IndustryConfig> = {
             createCustomer: "Yeni Üye",
             program: "Haftalık Program",
             package: "Paket",
-            session: "Seans"
+            session: "Seans",
+            instructor: "Eğitmen"
         },
         appointmentTypes: [
             { value: 'reformer', label: 'Reformer' },
@@ -55,7 +57,8 @@ export const INDUSTRY_CONFIG: Record<IndustryType, IndustryConfig> = {
             createCustomer: "Yeni Müşteri",
             program: "Randevu Takvimi",
             package: "Hizmet",
-            session: "Adet"
+            session: "Adet",
+            instructor: "Uzman"
         },
         appointmentTypes: [
             { value: 'hair_cut', label: 'Saç Kesimi' },
@@ -124,7 +127,8 @@ export const INDUSTRY_CONFIG: Record<IndustryType, IndustryConfig> = {
             createCustomer: "Yeni Hasta",
             program: "Randevu Takvimi",
             package: "Tedavi",
-            session: "Seans"
+            session: "Seans",
+            instructor: "Hekim"
         },
         appointmentTypes: [
             { value: 'checkup', label: 'Muayene' },
@@ -132,12 +136,31 @@ export const INDUSTRY_CONFIG: Record<IndustryType, IndustryConfig> = {
             { value: 'treatment', label: 'Tedavi' }
         ],
         packageTypes: [
-            { value: 'standard', label: 'Standart Tedavi' }
+            { value: 'checkup', label: 'Diş Hekimi Muayenesi' },
+            { value: 'xray', label: 'Panoramik Röntgen (Görüntüleme)' },
+            { value: 'scaling', label: 'Diş Taşı Temizliği (Detertraj)' },
+            { value: 'filling_composite', label: 'Kompozit Dolgu' },
+            { value: 'filling_amalgam', label: 'Amalgam Dolgu' },
+            { value: 'root_canal_1', label: 'Kanal Tedavisi (Tek Kanal)' },
+            { value: 'root_canal_multi', label: 'Kanal Tedavisi (Çoklu Kanal)' },
+            { value: 'extraction', label: 'Diş Çekimi' },
+            { value: 'extraction_wisdom', label: 'Gömülü 20 Yaş Diş Çekimi' },
+            { value: 'implant', label: 'İmplant Tedavisi' },
+            { value: 'crown_porcelain', label: 'Porselen Kuron (Kaplama)' },
+            { value: 'crown_zirconium', label: 'Zirkonyum Kaplama' },
+            { value: 'laminate', label: 'Lamine Diş (Yaprak Porselen)' },
+            { value: 'whitening_home', label: 'Diş Beyazlatma (Ev Tipi)' },
+            { value: 'whitening_office', label: 'Diş Beyazlatma (Ofis Tipi)' },
+            { value: 'orthodontics_metal', label: 'Ortodonti (Metal Braket)' },
+            { value: 'orthodontics_clear', label: 'Ortodonti (Şeffaf Plak/Invisalign)' },
+            { value: 'pedodontics', label: 'Çocuk Diş Hekimliği (Flor, Fissür Örtücü)' },
+            { value: 'prosthesis_total', label: 'Tam / Bölümlü Protez' },
+            { value: 'night_guard', label: 'Gece Plağı (Bruksizm)' }
         ],
         features: {
             measurements: false,
             classes: false,
-            packages: false
+            packages: true
         }
     },
     general: {
@@ -148,7 +171,8 @@ export const INDUSTRY_CONFIG: Record<IndustryType, IndustryConfig> = {
             createCustomer: "Yeni Müşteri",
             program: "Takvim",
             package: "Paket",
-            session: "Hak"
+            session: "Hak",
+            instructor: "Eğitmen"
         },
         appointmentTypes: [
             { value: 'standard', label: 'Standart Randevu' },

@@ -34,6 +34,9 @@ export function Sidebar({ role }: { role?: string }) {
 
     // Filter items based on role
     const filteredItems = sidebarItems.filter(item => {
+        if (!config.features.packages && item.href === '/packages') {
+            return false
+        }
         if (role === 'staff') {
             return !['/settings', '/reports', '/packages'].includes(item.href)
         }
@@ -93,17 +96,15 @@ export function Sidebar({ role }: { role?: string }) {
             </div>
 
             {/* Profile */}
-            <div className="p-4 border-t bg-slate-50">
-                <div className="flex items-center gap-3">
-                    <UserButton afterSignOutUrl="/sign-in" />
-                    <div className="flex-1 overflow-hidden">
-                        <p className="text-sm font-medium text-slate-900 truncate">
-                            {user?.fullName || "Kullanıcı"}
-                        </p>
-                        <p className="text-xs text-slate-500 truncate capitalize">
-                            {role === 'owner' ? 'Kurucu' : role === 'admin' ? 'Yönetici' : 'Eğitmen'}
-                        </p>
-                    </div>
+            <div className="flex items-center gap-3">
+                <UserButton afterSignOutUrl="/sign-in" />
+                <div className="flex-1 overflow-hidden">
+                    <p className="text-sm font-medium text-slate-900 truncate">
+                        {user?.fullName || "Kullanıcı"}
+                    </p>
+                    <p className="text-xs text-slate-500 truncate capitalize">
+                        {role === 'owner' ? 'Kurucu' : role === 'admin' ? 'Yönetici' : config.labels.instructor}
+                    </p>
                 </div>
             </div>
         </div>
