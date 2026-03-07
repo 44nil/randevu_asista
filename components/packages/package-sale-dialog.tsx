@@ -48,7 +48,7 @@ export function PackageSaleDialog({ customer, open, onOpenChange, onSuccess }: P
             const result = await sellPackage(customer.id, selectedPackageId)
 
             if (result.success) {
-                toast.success(`${config.labels.package || 'Paket'} satışı başarıyla gerçekleşti`)
+                toast.success(`${config.labels.package} satışı başarıyla gerçekleşti`)
                 onSuccess()
                 onOpenChange(false)
                 setSelectedPackageId("")

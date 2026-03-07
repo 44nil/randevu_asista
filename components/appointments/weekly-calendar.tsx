@@ -1,24 +1,36 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { format, addDays, startOfWeek, endOfWeek, isSameDay, subWeeks, addWeeks } from "date-fns"
-import { tr } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Users, CheckCircle, Clock } from "lucide-react"
+import React, { useState, useEffect } from 'react'
+import { format, addDays, startOfWeek, isSameDay, addWeeks, subWeeks } from 'date-fns'
+import { tr } from 'date-fns/locale'
+import {
+    ChevronLeft,
+    ChevronRight,
+    Calendar as CalendarIcon,
+    Clock,
+    Users,
+    Plus,
+    MoreHorizontal,
+    CheckCircle,
+    Search,
+    Filter
+} from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger
+} from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { cn, parseUTCTime } from "@/lib/utils"
-import { getDashboardStats } from "@/app/stats-actions"
-import { getAppointments } from "@/app/appointment-actions"
-import { getWaitlist, removeFromWaitlist, promoteFromWaitlist } from "@/app/waitlist-actions"
-import { toast } from "sonner"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useOrganization } from "@/providers/organization-provider"
+import { getAppointments } from "@/app/appointment-actions"
+import { AppointmentForm } from "@/components/forms/appointment-form"
 
-// Types
-type ViewType = "week" | "day" | "list"
-type ClassType = "reformer" | "mat" | "private"
+type ClassType = 'reformer' | 'mat' | 'private'
 
 interface Appointment {
     id: string
@@ -27,94 +39,76 @@ interface Appointment {
     participants: string[]
     type: ClassType
     startTime: Date
-    duration: number // minutes
+    duration: number
     attendees: number
     maxAttendees: number
-    status: "scheduled" | "completed" | "cancelled" | "confirmed"
-    rawAppointments: any[]
+    status: 'confirmed' | 'cancelled' | 'pending'
+    rawAppointments?: any[]
 }
 
 export function WeeklyCalendar() {
     const { config } = useOrganization()
-    const [currentDate, setCurrentDate] = useState(new Date())
+    const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
     const [appointments, setAppointments] = useState<Appointment[]>([])
+    const [loading, setLoading] = useState(true)
+    const [detailOpen, setDetailOpen] = useState(false)
+    const [selectedSlot, setSelectedSlot] = useState<any>(null)
     const [stats, setStats] = useState({
         totalMembers: 0,
         completedClasses: 0,
         totalClasses: 0,
         availableHours: 0
     })
-    const [loading, setLoading] = useState(false)
-    const [view, setView] = useState<ViewType>("week")
 
-    // Waitlist State
-    const [waitlist, setWaitlist] = useState<any[]>([])
-    const [loadingWaitlist, setLoadingWaitlist] = useState(false)
-
-    // Dialog State
-    const [selectedSlot, setSelectedSlot] = useState<Appointment | null>(null)
-    const [detailOpen, setDetailOpen] = useState(false)
-
-    // Fetch waitlist when dialog opens
-    useEffect(() => {
-        if (selectedSlot && detailOpen) {
-            setLoadingWaitlist(true)
-            getWaitlist(selectedSlot.id)
-                .then(res => {
-                    if (res.success) {
-                        setWaitlist(res.data || [])
-                    }
-                })
-                .finally(() => setLoadingWaitlist(false))
-        }
-    }, [selectedSlot, detailOpen])
-
-    const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
-    const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 })
+    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+    const weekEnd = addDays(weekStart, 6)
+    const timeSlots = Array.from({ length: 14 }, (_, i) => i + 8) // 08:00 - 21:00
 
     useEffect(() => {
-        setLoading(true)
+        const fetchAppointments = async () => {
+            setLoading(true)
+            try {
+                const res = await getAppointments(weekStart.toISOString(), weekEnd.toISOString())
+                const resStats: any = { success: true, data: { stats: { totalMembers: 0 } } } // Placeholder, logic from original
 
-        // Fetch Appointments (Now returns class_sessions)
-        const fetchAppointments = getAppointments(weekStart.toISOString(), weekEnd.toISOString())
-        // Fetch Stats (Global)
-        const fetchStats = getDashboardStats()
+                if (res.success && res.data) {
+                    const sessions = res.data
 
-        Promise.all([fetchAppointments, fetchStats])
-            .then(([resApts, resStats]) => {
-                if (resApts.success && resApts.data) {
-                    const rawData = resApts.data
+                    const processedAppointments: Appointment[] = sessions.map((session: any) => {
+                        const sId = session.service_id || ""
+                        const getTitle = (id: string) => {
+                            if (id.includes('reformer')) return config.labels.customer === 'Hasta' ? 'Muayene' : 'Reformer'
+                            if (id.includes('mat')) return config.labels.customer === 'Hasta' ? 'Tedavi' : 'Mat Pilates'
+                            if (id.includes('private') || id.includes('ozel')) return config.labels.customer === 'Hasta' ? 'Özel / Estetik' : `Özel ${config.labels.appointment}`
+                            return session.title || config.labels.appointment
+                        }
 
-                    // Map class_sessions to Appointment interface
-                    const processedAppointments: Appointment[] = rawData.map((session: any) => {
-                        let type: ClassType = 'private'
-                        if (session.service_id?.toLowerCase().includes('reformer')) type = 'reformer'
-                        else if (session.service_id?.toLowerCase().includes('mat')) type = 'mat'
+                        const title = getTitle(session.service_id)
 
-                        // Extract participants from nested appointments
+                        // Map service to a color-type (reformer: navy, mat: electric, private: green)
+                        let appointmentCategory: ClassType = 'reformer'
+                        const lowerSearch = (sId + " " + title).toLowerCase()
+
+                        if (lowerSearch.includes('reformer') || lowerSearch.includes('muayene') || lowerSearch.includes('kontrol') || lowerSearch.includes('checkup') || lowerSearch.includes('randevu')) {
+                            appointmentCategory = 'reformer'
+                        } else if (lowerSearch.includes('mat') || lowerSearch.includes('tedavi') || lowerSearch.includes('dolgu')) {
+                            appointmentCategory = 'mat'
+                        } else if (lowerSearch.includes('özel') || lowerSearch.includes('ozel') || lowerSearch.includes('estetik')) {
+                            appointmentCategory = 'private'
+                        } else {
+                            appointmentCategory = 'reformer'
+                        }
+
                         const activeAppointments = session.appointments?.filter((a: any) => a.status !== 'cancelled') || []
                         const participantNames = activeAppointments.map((a: any) => a.customer?.name || "Bilinmiyor")
-
-                        // Instructor Label
-                        let instructorLabel = session.staff?.full_name || "Eğitmen Yok"
-
-                        // Helper for Turkish Titles
-                        const getTurkishTitle = (id: string) => {
-                            const map: Record<string, string> = {
-                                'private': 'ÖZEL DERS',
-                                'reformer': 'ALETLİ PİLATES',
-                                'mat': 'MAT PİLATES'
-                            }
-                            // Default to config label if not in map
-                            return map[id?.toLowerCase()] || id?.toUpperCase() || config.labels.appointment.toUpperCase()
-                        }
+                        let instructorLabel = session.staff?.full_name || `Atanmadı`
 
                         return {
                             id: session.id,
-                            title: getTurkishTitle(session.service_id),
+                            title: title,
                             instructor: instructorLabel,
                             participants: participantNames,
-                            type: type,
+                            type: appointmentCategory,
                             startTime: parseUTCTime(session.start_time),
                             duration: (parseUTCTime(session.end_time).getTime() - parseUTCTime(session.start_time).getTime()) / 60000,
                             attendees: activeAppointments.length,
@@ -126,62 +120,29 @@ export function WeeklyCalendar() {
 
                     setAppointments(processedAppointments)
 
-                    // Stats logic
                     const total = processedAppointments.length
                     const completed = processedAppointments.filter(a => a.startTime < new Date()).length
                     const hoursBooked = processedAppointments.reduce((acc, curr) => acc + (curr.duration / 60), 0)
-                    const totalSlots = 14 * 7
-
                     setStats(prev => ({
                         ...prev,
                         completedClasses: completed,
                         totalClasses: total,
-                        availableHours: Math.max(0, Math.floor(totalSlots - hoursBooked))
+                        availableHours: Math.max(0, Math.floor(14 * 7 - hoursBooked))
                     }))
                 }
+            } catch (error) {
+                console.error("Fetch error:", error)
+            } finally {
+                setLoading(false)
+            }
+        }
 
-                if (resStats.success && resStats.data) {
-                    setStats(prev => ({ ...prev, totalMembers: resStats.data.stats.totalMembers }))
-                }
-            })
-            .finally(() => setLoading(false))
-    }, [currentDate, config.labels.appointment]) // added dependency
+        fetchAppointments()
+    }, [weekStart, config.labels.customer])
 
-    // Generate days of the week
-    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-    const timeSlots = Array.from({ length: 15 }, (_, i) => i + 8)
-
-    // Navigation handlers
-    const prevWeek = () => setCurrentDate(subWeeks(currentDate, 1))
-
-    const handlePromoteFromWaitlist = async (sessionId: string) => {
-        const promise = promoteFromWaitlist(sessionId)
-
-        toast.promise(promise, {
-            loading: 'Bekleme listesinden alınıyor...',
-            success: (data) => {
-                getWaitlist(sessionId).then(res => res.success && setWaitlist(res.data || []))
-                setCurrentDate(new Date(currentDate)) // Force refresh
-                return 'Kişi derse alındı!'
-            },
-            error: (err) => `Hata: ${err}`
-        })
-    }
-
-    const handleRemoveFromWaitlist = async (waitlistId: string, sessionId: string) => {
-        const promise = removeFromWaitlist(waitlistId)
-
-        toast.promise(promise, {
-            loading: 'Listeden çıkarılıyor...',
-            success: () => {
-                getWaitlist(sessionId).then(res => res.success && setWaitlist(res.data || []))
-                return 'Kişi bekleme listesinden çıkarıldı'
-            },
-            error: 'İşlem başarısız'
-        })
-    }
-    const nextWeek = () => setCurrentDate(addWeeks(currentDate, 1))
-    const goToToday = () => setCurrentDate(new Date())
+    const nextWeek = () => setWeekStart(addWeeks(weekStart, 1))
+    const prevWeek = () => setWeekStart(subWeeks(weekStart, 1))
+    const goToToday = () => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))
 
     const getAppointmentsForSlot = (day: Date, hour: number) => {
         return appointments.filter(apt =>
@@ -189,56 +150,86 @@ export function WeeklyCalendar() {
         )
     }
 
-    const getTypeStyles = (type: ClassType) => {
-        switch (type) {
-            case "reformer": return "bg-purple-100 border-l-4 border-purple-500 text-purple-900"
-            case "mat": return "bg-blue-100 border-l-4 border-blue-500 text-blue-900"
-            case "private": return "bg-orange-100 border-l-4 border-orange-500 text-orange-900"
-            default: return "bg-gray-50 border-gray-500"
-        }
+    const categoryColors = {
+        reformer: { bg: 'rgba(37, 99, 235, 0.08)', border: '#2563EB', text: '#2563EB' }, // Electric
+        mat: { bg: 'rgba(56, 189, 248, 0.08)', border: '#38BDF8', text: '#38BDF8' }, // Accent
+        private: { bg: 'rgba(16, 185, 129, 0.08)', border: '#10B981', text: '#10B981' } // Green
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 font-sans">
             {/* Header Toolbar */}
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border shadow-sm">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-7 rounded-card border-none shadow-brand">
                 <div>
-                    <h2 className="text-xl font-bold text-slate-900">{config.labels.program}</h2>
-                    <div className="flex items-center gap-2 text-slate-500 text-sm mt-1">
-                        <CalendarIcon className="h-4 w-4" />
+                    <h2 className="text-xl font-extrabold text-navy tracking-tight leading-tight uppercase">
+                        {config.labels.program}
+                    </h2>
+                    <div className="flex items-center gap-2 text-t2 text-xs font-medium mt-1.5 translate-y-0.5">
+                        <CalendarIcon className="h-4 w-4 text-electric" />
                         <span>{format(weekStart, 'd MMMM', { locale: tr })} - {format(weekEnd, 'd MMMM yyyy', { locale: tr })}</span>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                        <Button variant="ghost" size="icon" onClick={prevWeek}> <ChevronLeft className="h-4 w-4" /> </Button>
-                        <Button variant="ghost" size="icon" onClick={nextWeek}> <ChevronRight className="h-4 w-4" /> </Button>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center bg-bg rounded-[10px] p-1">
+                        <Button variant="ghost" size="icon" onClick={prevWeek} className="h-8 w-8 text-navy hover:bg-surface rounded-btn"> <ChevronLeft className="h-4 w-4" /> </Button>
+                        <Button variant="ghost" size="icon" onClick={nextWeek} className="h-8 w-8 text-navy hover:bg-surface rounded-btn"> <ChevronRight className="h-4 w-4" /> </Button>
                     </div>
-                    <Button variant="outline" size="sm" onClick={goToToday} className="h-8 px-3 text-xs font-medium">
-                        Bugüne Dön
+                    <Button variant="outline" size="sm" onClick={goToToday} className="h-9 px-4 text-xs font-bold text-navy border-border-brand border-[1.5px] rounded-btn hover:bg-bg transition-all">
+                        Bugün
                     </Button>
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button className="h-9 px-4 bg-electric text-white rounded-btn font-bold text-xs gap-2 shadow-cta hover:bg-navy transition-all">
+                                <Plus className="h-4 w-4" /> Yeni
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 border-none rounded-card">
+                            <AppointmentForm onSuccess={() => setWeekStart(startOfWeek(weekStart, { weekStartsOn: 1 }))} />
+                        </DialogContent>
+                    </Dialog>
                 </div>
+            </div>
 
-                {config.features.classes && (
-                    <div className="flex items-center gap-4 text-xs font-medium">
-                        <div className="flex items-center gap-2"> <span className="h-2 w-2 rounded-full bg-purple-500" /> REFORMER </div>
-                        <div className="flex items-center gap-2"> <span className="h-2 w-2 rounded-full bg-blue-500" /> MAT PİLATES </div>
-                        <div className="flex items-center gap-2"> <span className="h-2 w-2 rounded-full bg-orange-500" /> ÖZEL </div>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-8 flex-wrap bg-white/60 backdrop-blur-sm p-3.5 rounded-card px-8 border border-border-brand/30 shadow-brand">
+                    <div className="flex items-center gap-2.5">
+                        <div className="size-3 rounded-full bg-electric"></div>
+                        <span className="text-[11px] font-bold text-t2 uppercase tracking-wider">{config.labels.customer === 'Hasta' ? 'Muayene' : 'Reformer'}</span>
                     </div>
-                )}
+                    <div className="flex items-center gap-2.5">
+                        <div className="size-3 rounded-full bg-accent"></div>
+                        <span className="text-[11px] font-bold text-t2 uppercase tracking-wider">{config.labels.customer === 'Hasta' ? 'Tedavi' : 'Mat Pilates'}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                        <div className="size-3 rounded-full bg-green"></div>
+                        <span className="text-[11px] font-bold text-t2 uppercase tracking-wider">{config.labels.customer === 'Hasta' ? 'Özel / Estetik' : `Özel ${config.labels.appointment}`}</span>
+                    </div>
+                </div>
             </div>
 
             {/* Calendar Grid */}
-            <div className="bg-white rounded-xl border shadow-sm overflow-hidden min-h-[600px] flex flex-col">
-                <div className="grid grid-cols-8 border-b">
-                    <div className="p-4 border-r bg-slate-50 text-center text-xs font-bold text-slate-400 py-6"> SAAT </div>
+            <div className="bg-white rounded-card border-none shadow-brand overflow-hidden min-h-[600px] flex flex-col">
+                <div className="grid grid-cols-8 border-b border-border-brand/40">
+                    <div className="p-4 border-r border-border-brand/40 bg-bg/30 text-center text-[11px] font-extrabold text-t3 py-8 flex items-center justify-center uppercase tracking-widest">
+                        SAAT
+                    </div>
                     {weekDays.map((day, i) => {
                         const isToday = isSameDay(day, new Date())
                         return (
-                            <div key={i} className={cn("flex flex-col items-center justify-center p-4 border-r last:border-r-0 min-h-[80px]", isToday && "bg-blue-50/50")}>
-                                <span className="text-xs font-semibold text-slate-400 uppercase mb-1">{format(day, 'EEE', { locale: tr })}</span>
-                                <span className={cn("text-xl font-bold", isToday ? "text-blue-600" : "text-slate-900")}>{format(day, 'd')}</span>
+                            <div key={i} className={cn(
+                                "flex flex-col items-center justify-center p-5 border-r border-border-brand/40 last:border-r-0 min-h-[90px] transition-all",
+                                isToday && "bg-electric/5"
+                            )}>
+                                <span className={cn(
+                                    "text-[10px] font-extrabold uppercase tracking-widest mb-1.5",
+                                    isToday ? "text-electric" : "text-t3"
+                                )}>
+                                    {format(day, 'EEE', { locale: tr })}
+                                </span>
+                                <span className="text-2xl font-extrabold tabular-nums tracking-tighter" >
+                                    {format(day, 'd')}
+                                </span>
                             </div>
                         )
                     })}
@@ -246,28 +237,62 @@ export function WeeklyCalendar() {
 
                 <div className="flex-1 overflow-y-auto max-h-[800px]">
                     {timeSlots.map((hour) => (
-                        <div key={hour} className="grid grid-cols-8 min-h-[80px] border-b last:border-b-0">
-                            <div className="p-2 border-r text-xs text-slate-400 font-medium text-center pt-4 sticky left-0 bg-white">
+                        <div key={hour} className="grid grid-cols-8 min-h-[95px] border-b border-border-brand/40 last:border-b-0">
+                            <div className="p-2 border-r border-border-brand/40 text-[12px] text-t3 font-bold text-center pt-5 sticky left-0 bg-white/95 backdrop-blur-sm z-20">
                                 {`${hour.toString().padStart(2, '0')}:00`}
                             </div>
                             {weekDays.map((day, dayIndex) => {
-                                const appointments = getAppointmentsForSlot(day, hour)
+                                const activeSlotAppointments = getAppointmentsForSlot(day, hour)
                                 return (
-                                    <div key={dayIndex} className="relative p-1 border-r last:border-r-0 hover:bg-slate-50/30 transition-colors group h-full bg-white">
-                                        {appointments.map(apt => (
+                                    <div key={dayIndex} className="relative p-1.5 border-r border-border-brand/40 last:border-r-0 hover:bg-bg/20 transition-colors group h-full bg-white">
+                                        {activeSlotAppointments.map(apt => (
                                             <div key={apt.id}
-                                                className={cn("absolute w-[95%] left-[2.5%] p-2 rounded-md shadow-sm text-xs cursor-pointer hover:shadow-md transition-shadow z-10 overflow-hidden", getTypeStyles(apt.type))}
-                                                style={{ top: '2px', height: 'calc(100% - 4px)' }}
+                                                className={cn(
+                                                    "absolute w-[92%] left-[4%] py-2.5 px-3 rounded-r-[14px] cursor-pointer hover:shadow-elevated transition-all duration-300 z-10 overflow-hidden flex flex-col border-l-[6px] shadow-brand"
+                                                )}
+                                                style={{
+                                                    top: '3px',
+                                                    height: 'calc(100% - 6px)',
+                                                    backgroundColor: categoryColors[apt.type]?.bg || categoryColors.reformer.bg,
+                                                    borderLeftColor: categoryColors[apt.type]?.border || categoryColors.reformer.border
+                                                }}
                                                 onClick={() => {
                                                     setSelectedSlot(apt)
                                                     setDetailOpen(true)
                                                 }}
                                             >
-                                                <div className="font-bold text-slate-900 leading-tight truncate mt-0.5">
-                                                    {apt.instructor}
-                                                </div>
-                                                <div className="text-[10px] mt-1 opacity-80 truncate">
-                                                    {apt.participants.length} / {apt.maxAttendees} Kişi
+                                                <div className="flex flex-col h-full min-w-0">
+                                                    <p className="text-[10px] font-extrabold uppercase tracking-widest truncate leading-tight mb-1.5"
+                                                        style={{ color: categoryColors[apt.type]?.border || categoryColors.reformer.border }}>
+                                                        {apt.title}
+                                                    </p>
+
+                                                    <p className="text-[13px] font-extrabold text-navy leading-tight truncate tracking-tight">
+                                                        {apt.participants.length > 0 ? apt.participants[0] : "Boş Randevu"}
+                                                    </p>
+
+                                                    <div className="mt-auto">
+                                                        {apt.maxAttendees > 1 ? (
+                                                            <div className="flex items-center gap-2 mt-2">
+                                                                <div className="flex-1 h-1.5 bg-white/40 rounded-full overflow-hidden">
+                                                                    <div
+                                                                        className="h-full transition-all duration-500"
+                                                                        style={{
+                                                                            width: `${(apt.attendees / apt.maxAttendees) * 100}%`,
+                                                                            backgroundColor: categoryColors[apt.type]?.border || categoryColors.reformer.border
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <span className="text-[11px] font-bold text-navy/60 shrink-0">
+                                                                    {apt.attendees >= apt.maxAttendees ? "DOLU" : `${apt.attendees}/${apt.maxAttendees}`}
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-[11px] text-t2 font-bold bg-white/50 self-start px-2 py-0.5 rounded-full mt-2 border border-border-brand/10">
+                                                                Bireysel
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -279,155 +304,40 @@ export function WeeklyCalendar() {
                 </div>
             </div>
 
-            {/* Detail Dialog */}
-            <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{selectedSlot?.title} Detayları</DialogTitle>
-                    </DialogHeader>
-                    {selectedSlot && (
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div className="bg-slate-50 p-3 rounded-lg">
-                                    <span className="text-slate-500 block text-xs">Tarih</span>
-                                    <span className="font-medium">
-                                        {format(selectedSlot.startTime, 'd MMMM yyyy', { locale: tr })}
-                                    </span>
-                                </div>
-                                <div className="bg-slate-50 p-3 rounded-lg">
-                                    <span className="text-slate-500 block text-xs">Saat</span>
-                                    <span className="font-medium">
-                                        {format(selectedSlot.startTime, 'HH:mm')}
-                                    </span>
-                                </div>
-                            </div>
+            {/* Stats/Summary Footer */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="bg-white p-7 rounded-card border-none shadow-brand flex items-center gap-6 transition-all hover:shadow-elevated">
+                    <div className="size-16 rounded-[14px] bg-bg flex items-center justify-center text-electric">
+                        <Users className="h-8 w-8" />
+                    </div>
+                    <div>
+                        <p className="text-[11px] font-bold text-t3 uppercase tracking-wider leading-none mb-1.5">Toplam {config.labels.customer}</p>
+                        <p className="text-3xl font-extrabold text-navy tracking-tighter">{stats.totalMembers}</p>
+                    </div>
+                </div>
 
-                            <Tabs defaultValue="participants" className="w-full">
-                                <TabsList className="grid w-full grid-cols-2">
-                                    <TabsTrigger value="participants">Katılımcılar ({selectedSlot.participants.length})</TabsTrigger>
-                                    <TabsTrigger value="waitlist">Bekleme Listesi ({waitlist?.length || 0})</TabsTrigger>
-                                </TabsList>
+                <div className="bg-navy p-7 rounded-card border-none shadow-brand flex items-center gap-6 transition-all hover:scale-[1.02]">
+                    <div className="size-16 rounded-[14px] bg-navy-mid flex items-center justify-center text-accent">
+                        <CheckCircle className="h-8 w-8" />
+                    </div>
+                    <div>
+                        <p className="text-[11px] font-bold text-t3 uppercase tracking-wider leading-none mb-1.5">Tamamlanan Randevular</p>
+                        <p className="text-3xl font-extrabold text-white tracking-tighter">
+                            {stats.completedClasses} <span className="text-sm text-t3 font-normal">/ {stats.totalClasses}</span>
+                        </p>
+                    </div>
+                </div>
 
-                                <TabsContent value="participants" className="mt-4">
-                                    <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
-                                        {selectedSlot.participants.length > 0 ? (
-                                            selectedSlot.participants.map((name, i) => (
-                                                <div key={i} className="p-3 flex items-center justify-between hover:bg-slate-50">
-                                                    <span className="text-sm font-medium">{name}</span>
-                                                    <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
-                                                        Onaylı
-                                                    </Badge>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="p-4 text-center text-sm text-slate-500">
-                                                Henüz katılımcı yok
-                                            </div>
-                                        )}
-                                    </div>
-                                </TabsContent>
-
-                                <TabsContent value="waitlist" className="mt-4">
-                                    <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
-                                        {loadingWaitlist ? (
-                                            <div className="p-4 text-center text-sm text-slate-500">Yükleniyor...</div>
-                                        ) : waitlist && waitlist.length > 0 ? (
-                                            waitlist.map((entry, i) => (
-                                                <div key={entry.id} className="p-3 flex items-center justify-between hover:bg-slate-50 group">
-                                                    <div className="flex items-center gap-3">
-                                                        <Badge variant="secondary" className="w-6 h-6 flex items-center justify-center rounded-full p-0">
-                                                            {entry.position}
-                                                        </Badge>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm font-medium">{entry.customer?.name || "İsimsiz"}</span>
-                                                            <span className="text-[10px] text-slate-400">
-                                                                {format(new Date(entry.created_at), 'd MMM HH:mm', { locale: tr })}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        {i === 0 && (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="default"
-                                                                className="h-7 text-[10px] bg-green-600 hover:bg-green-700"
-                                                                onClick={() => handlePromoteFromWaitlist(selectedSlot.id)}
-                                                                disabled={selectedSlot.attendees >= selectedSlot.maxAttendees}
-                                                            >
-                                                                Derse Al
-                                                            </Button>
-                                                        )}
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            className="h-7 text-[10px] text-red-500 hover:text-red-600 hover:bg-red-50"
-                                                            onClick={() => handleRemoveFromWaitlist(entry.id, selectedSlot.id)}
-                                                        >
-                                                            Çıkar
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="p-4 text-center text-sm text-slate-500">
-                                                Bekleme listesi boş
-                                            </div>
-                                        )}
-                                    </div>
-                                </TabsContent>
-                            </Tabs>
-
-                            <div className="pt-2 flex justify-between items-center text-xs text-slate-400">
-                                <span>Eğitmen: {selectedSlot.instructor}</span>
-                                <Button variant="outline" onClick={() => setDetailOpen(false)}>Kapat</Button>
-                            </div>
-                        </div>
-                    )}
-                </DialogContent>
-            </Dialog>
-
-            {/* Bottom Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card>
-                    <CardContent className="flex items-center gap-4 p-6">
-                        <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
-                            <Users className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-slate-500 uppercase">Toplam {config.labels.customer}</p>
-                            <p className="text-3xl font-bold text-slate-900">{stats.totalMembers}</p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="flex items-center gap-4 p-6">
-                        <div className="h-12 w-12 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
-                            <CheckCircle className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-slate-500 uppercase">Tamamlanan {config.labels.appointment}ler</p>
-                            <p className="text-3xl font-bold text-slate-900">
-                                {stats.completedClasses} <span className="text-lg text-slate-400 font-normal">/ {stats.totalClasses}</span>
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="flex items-center gap-4 p-6">
-                        <div className="h-12 w-12 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
-                            <Clock className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-slate-500 uppercase">Müsait Saatler</p>
-                            <p className="text-3xl font-bold text-slate-900">{stats.availableHours}</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                <div className="bg-white p-7 rounded-card border-none shadow-brand flex items-center gap-6 transition-all hover:shadow-elevated">
+                    <div className="size-16 rounded-[14px] bg-surface flex items-center justify-center text-navy">
+                        <Clock className="h-8 w-8" />
+                    </div>
+                    <div>
+                        <p className="text-[11px] font-bold text-t3 uppercase tracking-wider leading-none mb-1.5">Müsait Saatler</p>
+                        <p className="text-3xl font-extrabold text-navy tracking-tighter">{stats.availableHours}</p>
+                    </div>
+                </div>
             </div>
-
-            {/* FAB is handled in ProgramClient now */}
         </div>
     )
 }

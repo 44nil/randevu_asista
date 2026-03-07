@@ -68,7 +68,7 @@ export function GeneralSettings({ defaultValues }: GeneralSettingsProps) {
                 {/* Logo Section */}
                 <Card className="md:col-span-1 h-fit">
                     <CardHeader>
-                        <CardTitle className="text-base">Salon Logosu</CardTitle>
+                        <CardTitle className="text-base">İşletme Logosu</CardTitle>
                     </CardHeader>
                     <CardContent className="flex flex-col items-center gap-4">
                         <div className="relative group">
@@ -94,7 +94,7 @@ export function GeneralSettings({ defaultValues }: GeneralSettingsProps) {
                     <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2">
                             <span className="bg-blue-100 text-blue-600 p-1 rounded-full w-5 h-5 flex items-center justify-center text-xs">i</span>
-                            Salon Bilgileri
+                            İşletme Bilgileri
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -133,9 +133,9 @@ export function GeneralSettings({ defaultValues }: GeneralSettingsProps) {
                                         name="name"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Salon Adı</FormLabel>
+                                                <FormLabel>İşletme Adı</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="Örn: Zen Pilates Studio" {...field} />
+                                                    <Input placeholder="İşletme adınızı girin" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>

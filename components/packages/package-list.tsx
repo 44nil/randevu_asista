@@ -40,7 +40,16 @@ export function PackageList({ data, onRefresh }: PackageListProps) {
 
     const getTypeBadge = (type: string) => {
         const found = config.packageTypes?.find(t => t.value === type)
-        const label = found?.label || type
+        let label = found?.label || type
+
+        // Add robust fallback for old database rows that default to "group"
+        if (!found) {
+            if (config.labels.customer === 'Hasta') {
+                label = type === 'group' ? 'Genel Tedavi' : type;
+            } else {
+                label = type === 'group' ? 'Grup' : type === 'private' ? 'Özel' : type;
+            }
+        }
 
         // Simple consistent coloring based on type value length/hash could be better, 
         // but for now let's map known ones and fallback to gray
@@ -57,7 +66,7 @@ export function PackageList({ data, onRefresh }: PackageListProps) {
             <div className="p-6 border-b flex justify-between items-center">
                 <div>
                     <h3 className="font-bold text-lg text-slate-900">Aktif {config.labels.package} Tanımları</h3>
-                    <p className="text-sm text-slate-500">Salonunuzda sunduğunuz {config.labels.package ? `${config.labels.package.toLowerCase()}` : "hizmet"} {config.labels.appointment.toLowerCase() ? `${config.labels.appointment.toLowerCase()}lerini` : "lerinizi"} buradan yönetebilirsiniz.</p>
+                    <p className="text-sm text-slate-500">İşletmenizde sunduğunuz {config.labels.package ? `${config.labels.package.toLowerCase()}` : "hizmet"} {config.labels.appointment.toLowerCase() ? `${config.labels.appointment.toLowerCase()}lerini` : "lerinizi"} buradan yönetebilirsiniz.</p>
                 </div>
             </div>
 

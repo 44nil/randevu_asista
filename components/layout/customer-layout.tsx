@@ -5,14 +5,16 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { LayoutDashboard, Calendar, History, User, LogOut, Settings, TrendingUp } from "lucide-react"
 import { SignOutButton } from "@clerk/nextjs"
+import { useOrganization } from "@/providers/organization-provider"
 
 export function CustomerLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
+    const { config } = useOrganization()
 
     const navItems = [
         { href: "/", label: "Kontrol Paneli", icon: LayoutDashboard },
         { href: "/reservations", label: "Rezervasyon", icon: Calendar },
-        { href: "/history", label: "Derslerim", icon: History },
+        { href: "/history", label: `${config.labels.appointment || 'İşlem'} Geçmişi`, icon: History },
         { href: "/progress", label: "Gelişim Takibi", icon: TrendingUp },
         { href: "/settings", label: "Ayarlar", icon: Settings },
     ]
@@ -28,8 +30,10 @@ export function CustomerLayout({ children }: { children: React.ReactNode }) {
                             E
                         </div>
                         <div>
-                            <h1 className="font-bold text-slate-800 leading-tight">Elite Pilates</h1>
-                            <p className="text-xs text-slate-500">Üye Paneli</p>
+                            <h1 className="font-bold text-slate-800 leading-tight">
+                                {config.labels.customer === 'Hasta' ? 'Mydent Clinic' : 'Elite Pilates'}
+                            </h1>
+                            <p className="text-xs text-slate-500">{config.labels.customer || 'Üye'} Paneli</p>
                         </div>
                     </div>
                 </div>

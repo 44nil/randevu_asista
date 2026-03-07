@@ -3,12 +3,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Bell } from "lucide-react"
+import { useOrganization } from "@/providers/organization-provider"
 
 interface RemindersPanelProps {
     data?: any[] // Expecting array of upcoming appointments or custom reminders
 }
 
 export function RemindersPanel({ data }: RemindersPanelProps) {
+    const { config } = useOrganization()
     const hasData = data && data.length > 0;
 
     return (
@@ -25,7 +27,7 @@ export function RemindersPanel({ data }: RemindersPanelProps) {
                         data!.map((item, index) => (
                             <li key={index} className="text-sm text-blue-800 flex items-start gap-2">
                                 <span className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                                {item.customer?.name ? `${item.customer.name} ile ders yaklaşıyor.` : "Hatırlatma"}
+                                {item.customer?.name ? `${item.customer.name} ile ${config.labels.appointment.toLowerCase()} yaklaşıyor.` : "Hatırlatma"}
                             </li>
                         ))
                     )}

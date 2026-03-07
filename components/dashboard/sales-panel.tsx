@@ -39,9 +39,9 @@ export function SalesPanel({ data }: SalesPanelProps) {
                                 </div>
                                 <div className="flex-1">
                                     <div className="flex justify-between items-start">
-                                        <h5 className="text-sm font-semibold text-slate-900">
+                                        <p className="text-sm font-bold text-navy">
                                             {item.package?.name || "Bilinmeyen Paket"}
-                                        </h5>
+                                        </p>
                                         <span className="text-xs text-slate-400">
                                             {formatDistanceToNow(new Date(item.sale_date), { addSuffix: true, locale: tr })}
                                         </span>

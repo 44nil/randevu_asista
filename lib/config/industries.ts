@@ -13,11 +13,12 @@ export interface IndustryConfig {
         instructor: string; // e.g. "Eğitmen", "Hekim", "Uzman"
     };
     appointmentTypes: { value: string; label: string }[];
-    packageTypes: { value: string; label: string }[];
+    packageTypes: { value: string; label: string; booking_type?: 'individual' | 'group' }[];
     features: {
         measurements: boolean; // Vücut ölçümleri
         classes: boolean; // Grup dersleri (Reformer vb.) vs Birebir Randevu
         packages: boolean; // Paket satışı var mı?
+        recurring: boolean; // Tekrarlı randevu var mı?
     };
 }
 
@@ -46,7 +47,8 @@ export const INDUSTRY_CONFIG: Record<IndustryType, IndustryConfig> = {
         features: {
             measurements: true,
             classes: true,
-            packages: true
+            packages: true,
+            recurring: true
         }
     },
     hair: {
@@ -116,7 +118,8 @@ export const INDUSTRY_CONFIG: Record<IndustryType, IndustryConfig> = {
         features: {
             measurements: false,
             classes: false,
-            packages: true
+            packages: true,
+            recurring: false
         }
     },
     dental: {
@@ -160,7 +163,8 @@ export const INDUSTRY_CONFIG: Record<IndustryType, IndustryConfig> = {
         features: {
             measurements: false,
             classes: false,
-            packages: true
+            packages: true,
+            recurring: false
         }
     },
     general: {
@@ -184,14 +188,13 @@ export const INDUSTRY_CONFIG: Record<IndustryType, IndustryConfig> = {
         features: {
             measurements: false,
             classes: false,
-            packages: true
+            packages: true,
+            recurring: false
         }
     }
 };
 
 export function getIndustryConfig(type?: string): IndustryConfig {
-    // Default to 'general' if unknown or undefined, but if 'pilates' (legacy default) use that.
-    // Actually, let's look at what the type string is.
     const key = (type as IndustryType) || 'general';
     return INDUSTRY_CONFIG[key] || INDUSTRY_CONFIG.general;
 }

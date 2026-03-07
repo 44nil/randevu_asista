@@ -1,15 +1,10 @@
 import { ClerkProvider } from '@clerk/nextjs'
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
   subsets: ["latin"],
 });
 
@@ -23,26 +18,28 @@ import { Toaster } from "@/components/ui/sonner"
 import { getUserProfile } from "@/app/actions";
 import { OrganizationProvider } from "@/providers/organization-provider";
 import { AuthCheck } from "@/components/auth-check";
+import { auth } from '@clerk/nextjs/server';
 
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { userId } = await auth();
   const profile = await getUserProfile();
 
   return (
     <ClerkProvider>
       <html lang="en">
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          className={`${plusJakartaSans.variable} font-sans antialiased bg-[#E6ECF8]`}
         >
           <OrganizationProvider
             organization={profile?.organization || null}
             user={profile ? { id: profile.id, role: profile.role, full_name: profile.full_name } : null}
           >
             <AuthCheck
-              userId={profile?.clerk_id}
+              userId={userId || profile?.clerk_id}
               hasOrganization={!!profile?.organization_id}
             />
             {children}

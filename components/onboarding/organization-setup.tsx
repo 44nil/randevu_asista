@@ -84,7 +84,7 @@ export function OrganizationSetup() {
                                     <FormItem>
                                         <FormLabel>İşletme Adı</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Örn: Sağlık Pilates Merkezi" {...field} />
+                                            <Input placeholder="Örn: Asista Sağlık Merkezi" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -143,7 +143,7 @@ export function OrganizationSetup() {
                                 Sayfayı Zorla Yenile
                             </span>
                             <span className="text-red-600 cursor-pointer hover:underline font-bold" onClick={handleFix}>
-                                Bağlantıyı Onar (Elif Pilates)
+                                Bağlantıyı Onar
                             </span>
                         </div>
                     </div>

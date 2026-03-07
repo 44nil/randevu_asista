@@ -10,15 +10,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { getCustomers } from "@/app/actions"
 import { createClassSession } from "@/app/appointment-actions"
 import { toast } from "sonner"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon, X, Check } from "lucide-react"
+import { CalendarIcon, X, Check, Search, UserPlus, Trash2 } from "lucide-react"
 import { format } from "date-fns"
 import { tr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { CustomerForm } from "@/components/forms/customer-form"
 
 import { useOrganization } from "@/providers/organization-provider"
 
@@ -42,10 +44,13 @@ interface AppointmentFormProps {
 }
 
 export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps) {
-    const { config } = useOrganization()
+    const { config, organization } = useOrganization()
     const [customers, setCustomers] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
     const [mounted, setMounted] = useState(false)
+    const [searchTerm, setSearchTerm] = useState("")
+    const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false)
+    const [isPickerOpen, setIsPickerOpen] = useState(false)
 
     // Track when component is mounted on client side
     useEffect(() => {
@@ -53,10 +58,13 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
     }, [])
 
     // Load customers for selection
+    const loadCustomers = async () => {
+        const res = await getCustomers()
+        if (res.success) setCustomers(res.data)
+    }
+
     useEffect(() => {
-        getCustomers().then(res => {
-            if (res.success) setCustomers(res.data)
-        })
+        loadCustomers()
     }, [])
 
     const form = useForm<AppointmentFormValues>({
@@ -77,10 +85,25 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
     const selectedCustomerIds = form.watch("customer_ids")
     const isRecurring = form.watch("is_recurring")
 
+    const filteredCustomers = useMemo(() => {
+        if (!searchTerm) return customers
+        return customers.filter(c =>
+            c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.phone?.includes(searchTerm)
+        )
+    }, [customers, searchTerm])
+
     const handleAddCustomer = (customerId: string) => {
         const current = form.getValues("customer_ids")
-        if (!current.includes(customerId)) {
-            form.setValue("customer_ids", [...current, customerId])
+        if (config.features.classes) {
+            // Group class: multiple allowed
+            if (!current.includes(customerId)) {
+                form.setValue("customer_ids", [...current, customerId])
+            }
+        } else {
+            // Individual (Dental/Hair): only one allowed
+            form.setValue("customer_ids", [customerId])
+            setIsPickerOpen(false)
         }
     }
 
@@ -130,15 +153,16 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
             console.log('📊 Result from createClassSession:', result)
 
             if (result.success) {
-                toast.success(data.is_recurring
-                    ? `${parseInt(data.recurring_weeks || "0")} haftalık program oluşturuldu`
-                    : `${config.labels.appointment} oluşturuldu`
-                )
+                toast.success("Randevu Planlandı", {
+                    description: data.is_recurring
+                        ? `${parseInt(data.recurring_weeks || "0")} haftalık program başarıyla oluşturuldu.`
+                        : "Randevunuz sisteme eklendi ve onaylandı."
+                })
                 form.reset()
                 if (onSuccess) onSuccess()
             } else {
                 console.error('❌ Error from createClassSession:', result.error)
-                toast.error("Hata", { description: result.error })
+                toast.error("İşlem Başarısız", { description: result.error })
             }
         } catch (error) {
             console.error('❌ Exception in onSubmit:', error)
@@ -150,31 +174,42 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pt-2">
+                <div className="mb-6">
+                    <h2 className="text-2xl font-extrabold text-navy tracking-tight uppercase">
+                        YENİ {config.labels.appointment.toUpperCase()}
+                    </h2>
+                    <p className="text-t2 text-xs font-medium mt-1">Lütfen gerekli bilgileri eksiksiz doldurun.</p>
+                </div>
+
                 <FormField
                     control={form.control}
                     name="title"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>{config.labels.appointment} Başlığı</FormLabel>
+                            <FormLabel className="text-navy font-bold text-[11px] uppercase tracking-wider mb-2">Hizmet Başlığı</FormLabel>
                             <FormControl>
-                                <Input placeholder={`Örn: ${config.labels.appointment} - Muayene`} {...field} />
+                                <Input
+                                    placeholder={`Örn: ${config.labels.appointment} - Muayene`}
+                                    {...field}
+                                    className="rounded-input border-[1.5px] border-border-brand h-12 focus:border-electric focus:ring-4 focus:ring-electric/5 transition-all font-medium text-navy bg-white shadow-sm"
+                                />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-[11px] font-bold" />
                         </FormItem>
                     )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                         control={form.control}
                         name="type"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>{config.labels.appointment} Tipi</FormLabel>
+                                <FormLabel className="mb-2">{config.labels.appointment} Tipi</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="h-12 rounded-input border-[1.5px] border-border-brand bg-white font-medium text-navy hover:bg-bg transition-all shadow-sm">
                                             <SelectValue placeholder="Seçiniz" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -191,62 +226,127 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                         )}
                     />
 
-                    <FormItem>
-                        <FormLabel>Katılımcılar</FormLabel>
-                        <Select onValueChange={handleAddCustomer}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder={`${config.labels.customer} Seç (+)`} />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {customers.map(c => (
-                                    <SelectItem key={c.id} value={c.id} disabled={selectedCustomerIds.includes(c.id)}>
-                                        {c.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    <FormItem className="flex flex-col justify-end">
+                        <FormLabel className="mb-2">{config.labels.customer} Seçimi</FormLabel>
+                        <Popover open={isPickerOpen} onOpenChange={setIsPickerOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={isPickerOpen}
+                                    className="w-full justify-between font-bold h-12 rounded-input border-[1.5px] border-border-brand bg-white text-navy hover:bg-bg hover:border-electric/30 transition-all px-4 shadow-sm"
+                                >
+                                    <span className="truncate">
+                                        {selectedCustomerIds.length > 0
+                                            ? customers.find((c) => c.id === selectedCustomerIds[0])?.name
+                                            : `${config.labels.customer} Seç...`}
+                                    </span>
+                                    <Search className="ml-2 h-4 w-4 shrink-0 opacity-50 text-electric" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0" align="start">
+                                <div className="flex flex-col p-2 space-y-2">
+                                    <div className="flex items-center border rounded-md px-3 bg-slate-50">
+                                        <Search className="h-4 w-4 mr-2 opacity-50" />
+                                        <Input
+                                            placeholder="İsim veya telefon..."
+                                            className="border-0 focus-visible:ring-0 bg-transparent h-9 p-0"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="max-h-[200px] overflow-y-auto space-y-1">
+                                        {filteredCustomers.length > 0 ? (
+                                            filteredCustomers.map((c) => (
+                                                <div
+                                                    key={c.id}
+                                                    className={cn(
+                                                        "flex items-center justify-between px-2 py-1.5 rounded-sm cursor-pointer hover:bg-slate-100 text-sm",
+                                                        selectedCustomerIds.includes(c.id) && "bg-blue-50 text-blue-700 font-medium"
+                                                    )}
+                                                    onClick={() => handleAddCustomer(c.id)}
+                                                >
+                                                    <div className="flex flex-col">
+                                                        <span>{c.name}</span>
+                                                        <span className="text-xs opacity-50">{c.phone}</span>
+                                                    </div>
+                                                    {selectedCustomerIds.includes(c.id) && <Check className="h-4 w-4" />}
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="py-6 text-center text-sm text-slate-500 italic">
+                                                {config.labels.customer} bulunamadı
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="border-t pt-2">
+                                        <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button variant="ghost" className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-medium h-9">
+                                                    <UserPlus className="mr-2 h-4 w-4" />
+                                                    Yeni {config.labels.customer} Ekle
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent className="max-w-md">
+                                                <DialogHeader>
+                                                    <DialogTitle>Yeni {config.labels.customer} Kaydı</DialogTitle>
+                                                </DialogHeader>
+                                                <CustomerForm
+                                                    industryType={(organization?.industry_type as any) || "general"}
+                                                    onSuccess={() => {
+                                                        loadCustomers()
+                                                        setIsCustomerDialogOpen(false)
+                                                    }}
+                                                />
+                                            </DialogContent>
+                                        </Dialog>
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+
+                        {/* Selected Customers Display (Especially for Group Classes) */}
                         <div className="flex flex-wrap gap-2 mt-2">
-                            {selectedCustomerIds.map(id => {
+                            {selectedCustomerIds.map((id: string) => {
                                 const customer = customers.find(c => c.id === id)
                                 return (
-                                    <Badge key={id} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1">
+                                    <Badge key={id} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-100">
                                         {customer?.name || "Bilinmeyen"}
                                         <Button
                                             type="button"
                                             variant="ghost"
                                             size="sm"
-                                            className="h-4 w-4 p-0 hover:bg-transparent text-slate-500 hover:text-red-500 rounded-full"
-                                            onClick={() => handleRemoveCustomer(id)}
+                                            className="h-4 w-4 p-0 hover:bg-transparent text-blue-400 hover:text-red-500 rounded-full"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                handleRemoveCustomer(id)
+                                            }}
                                         >
                                             <X className="h-3 w-3" />
                                         </Button>
                                     </Badge>
                                 )
                             })}
-                            {selectedCustomerIds.length === 0 && (
-                                <p className="text-xs text-slate-400 italic">Katılımcı eklemeden {config.labels.appointment.toLowerCase()} oluşturabilirsiniz. {config.labels.customer}ler randevu alabilir.</p>
-                            )}
                         </div>
-                        <FormMessage>{form.formState.errors.customer_ids?.message}</FormMessage>
                     </FormItem>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                         control={form.control}
                         name="appointment_date"
                         render={({ field }) => (
                             <FormItem className="flex flex-col">
-                                <FormLabel>Tarih</FormLabel>
+                                <FormLabel className="mb-2">Tarih</FormLabel>
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <FormControl>
                                             <Button
                                                 variant={"outline"}
                                                 className={cn(
-                                                    "w-full pl-3 text-left font-normal",
+                                                    "w-full pl-3 text-left font-bold h-12 rounded-input border-[1.5px] border-border-brand bg-white text-navy hover:bg-bg transition-all shadow-sm",
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                             >
@@ -267,6 +367,7 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                                             disabled={(date) =>
                                                 date < new Date(new Date().setHours(0, 0, 0, 0))
                                             }
+                                            locale={tr}
                                             initialFocus
                                         />
                                     </PopoverContent>
@@ -281,10 +382,10 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                         name="time"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Saat</FormLabel>
+                                <FormLabel className="mb-2">Saat</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="h-12 rounded-input border-[1.5px] border-border-brand bg-white font-medium text-navy hover:bg-bg transition-all shadow-sm">
                                             <SelectValue placeholder="Seçiniz" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -302,16 +403,16 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                     />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                         control={form.control}
                         name="duration"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Süre (Dk)</FormLabel>
+                                <FormLabel className="mb-2">Süre (Dk)</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="h-12 rounded-input border-[1.5px] border-border-brand bg-white font-medium text-navy hover:bg-bg transition-all shadow-sm">
                                             <SelectValue placeholder="Seçiniz" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -333,9 +434,9 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                             name="max_attendees"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Kontenjan</FormLabel>
+                                    <FormLabel className="mb-2">Kontenjan</FormLabel>
                                     <FormControl>
-                                        <Input type="number" min="1" {...field} />
+                                        <Input type="number" min="1" {...field} className="h-12 rounded-input border-[1.5px] border-border-brand bg-white font-medium text-navy shadow-sm focus:border-electric focus:ring-4 focus:ring-electric/5 transition-all" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -345,51 +446,53 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                 </div>
 
                 {/* Recurring Options */}
-                <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
-                    <FormField
-                        control={form.control}
-                        name="is_recurring"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-white">
-                                <div className="space-y-0.5">
-                                    <FormLabel className="text-base">Tekrarlı Ders</FormLabel>
-                                    <FormDescription>
-                                        Bu dersi sonraki haftalara da kopyala
-                                    </FormDescription>
-                                </div>
-                                <FormControl>
-                                    <Switch
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                            </FormItem>
-                        )}
-                    />
-
-                    {isRecurring && (
+                {config.features.recurring && (
+                    <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
                         <FormField
                             control={form.control}
-                            name="recurring_weeks"
+                            name="is_recurring"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Kaç hafta tekrar edecek?</FormLabel>
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-white">
+                                    <div className="space-y-0.5">
+                                        <FormLabel className="text-base">Tekrarlı {config.labels.appointment}</FormLabel>
+                                        <FormDescription>
+                                            Bu {config.labels.appointment.toLowerCase()}i sonraki haftalara da kopyala
+                                        </FormDescription>
+                                    </div>
                                     <FormControl>
-                                        <Input type="number" min="1" max="52" {...field} />
+                                        <Switch
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
                                     </FormControl>
-                                    <FormDescription>Örn: 4 yazarsanız, bu ders ve sonraki 3 hafta (toplam 4 ders) oluşturulur.</FormDescription>
-                                    <FormMessage />
                                 </FormItem>
                             )}
                         />
-                    )}
-                </div>
+
+                        {isRecurring && (
+                            <FormField
+                                control={form.control}
+                                name="recurring_weeks"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Kaç hafta tekrar edecek?</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" min="1" max="52" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Örn: 4 yazarsanız, bu {(config.labels.appointment || "randevu").toLowerCase()} ve sonraki 3 hafta (toplam 4 {(config.labels.appointment || "randevu").toLowerCase()}) oluşturulur.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+                    </div>
+                )}
 
                 <Button
                     type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    className="w-full bg-electric text-white rounded-btn font-extrabold text-sm shadow-cta hover:bg-navy transition-all h-12 uppercase tracking-wide"
                     disabled={loading}
-                    onClick={() => console.log('🔘 Submit button clicked!')}
+                    style={{ fontWeight: 800 }}
                 >
                     {loading ? "Planlanıyor..." : `${config.labels.appointment} Oluştur`}
                 </Button>

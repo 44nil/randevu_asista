@@ -97,7 +97,7 @@ export function PackageStats({ data }: PackageStatsProps) {
                 {/* Revenue Trend Chart - Simple SVG based */}
                 <div className="bg-white rounded-xl border shadow-sm p-6 relative overflow-hidden">
                     <div className="flex justify-between items-center mb-6">
-                        <h3 className="font-bold text-slate-900">Aylık Gelir Trendi</h3>
+                        <h3 className="text-base font-extrabold text-navy uppercase tracking-tight">Aylık Gelir Trendi</h3>
                         <span className="text-xs font-medium bg-slate-100 px-2 py-1 rounded text-slate-600">Son 6 Ay</span>
                     </div>
                     <div className="h-48 relative flex items-end justify-between px-2 gap-2">
@@ -123,7 +123,7 @@ export function PackageStats({ data }: PackageStatsProps) {
                 {/* Package Distribution Chart */}
                 <div className="bg-white rounded-xl border shadow-sm p-6 flex flex-col items-center justify-center">
                     <div className="w-full flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-slate-900">{config.labels.package} Türüne Göre Dağılım</h3>
+                        <h3 className="text-base font-extrabold text-navy uppercase tracking-tight">{config.labels.package} Türüne Göre Dağılım</h3>
                         <span className="text-xs text-red-500 font-medium">-3% Geçen Aya Göre</span>
                     </div>
 
@@ -134,7 +134,9 @@ export function PackageStats({ data }: PackageStatsProps) {
                                     %45
                                 </div>
                             </div>
-                            <span className="text-xs font-bold text-blue-600">Grup</span>
+                            <span className="text-xs font-bold text-blue-600">
+                                {config.labels.customer === 'Hasta' ? 'Teşhis' : 'Grup'}
+                            </span>
                         </div>
                         <div className="flex flex-col items-center gap-3">
                             <div className="w-16 bg-blue-400 rounded-t-lg shadow-lg shadow-blue-400/20 h-32 relative group">
@@ -142,7 +144,9 @@ export function PackageStats({ data }: PackageStatsProps) {
                                     %65
                                 </div>
                             </div>
-                            <span className="text-xs font-bold text-blue-500">Özel</span>
+                            <span className="text-xs font-bold text-blue-500">
+                                {config.labels.customer === 'Hasta' ? 'Tedavi' : 'Özel'}
+                            </span>
                         </div>
                         <div className="flex flex-col items-center gap-3">
                             <div className="w-16 bg-blue-300 rounded-t-lg shadow-lg shadow-blue-300/20 h-16 relative group">
@@ -150,7 +154,9 @@ export function PackageStats({ data }: PackageStatsProps) {
                                     %25
                                 </div>
                             </div>
-                            <span className="text-xs font-bold text-blue-400">Düet</span>
+                            <span className="text-xs font-bold text-blue-400">
+                                {config.labels.customer === 'Hasta' ? 'Cerrahi' : 'Düet'}
+                            </span>
                         </div>
                     </div>
                 </div>

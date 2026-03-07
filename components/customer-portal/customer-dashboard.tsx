@@ -52,25 +52,27 @@ export function CustomerDashboard() {
         <CustomerLayout>
             <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
                 {/* Header */}
-                <header className="flex justify-between items-center mb-6">
+                <header className="flex justify-between items-center mb-10">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-800">Hoş geldin, {user?.full_name?.split(' ')[0]}!</h1>
-                        <p className="text-slate-500">Bugün harika bir gün.</p>
+                        <h1 className="text-3xl font-extrabold text-navy tracking-tight uppercase">
+                            Selam, {user?.full_name?.split(' ')[0]}!
+                        </h1>
+                        <p className="text-t2 text-sm font-medium mt-1 opacity-80">Bugün harika bir gün.</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <Button variant="ghost" size="icon" className="relative text-slate-400 hover:text-slate-600">
+                    <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="icon" className="relative text-navy/40 hover:text-navy hover:bg-bg rounded-btn transition-colors">
                             <Bell className="h-6 w-6" />
-                            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 border border-white" />
+                            <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-electric border-2 border-white shadow-brand" />
                         </Button>
-                        <Button className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200">
+                        <Button className="bg-electric text-white font-extrabold text-xs px-6 h-11 rounded-btn shadow-cta hover:bg-navy transition-all uppercase tracking-wide" style={{ fontWeight: 800 }}>
                             <Plus className="mr-2 h-4 w-4" />
-                            Yeni Rezervasyon
+                            Yeni {config.labels.appointment}
                         </Button>
                     </div>
                 </header>
 
                 {/* Hero Section */}
-                <HeroSection userName={user?.full_name || "Sporcu"} />
+                <HeroSection userName={user?.full_name || (config.labels.customer === 'Hasta' ? 'Hasta' : 'Kullanıcı')} />
 
                 {/* Grid Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -95,52 +97,57 @@ export function CustomerDashboard() {
                         </div>
 
                         {/* Recent Stats or Quick Actions could go here */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center">
-                                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">BU AY</p>
-                                <p className="text-3xl font-black text-slate-900">{data?.stats?.attended || 0}</p>
-                                <p className="text-xs text-slate-500 font-medium mt-1">{config.labels.session || 'Seans'}</p>
-                                <p className="text-([10px] text-green-600 font-bold mt-2 bg-green-50 inline-block px-2 py-0.5 rounded-full">
-                                    +2 geçen aya göre
-                                </p>
+                        <div className="grid grid-cols-2 gap-5">
+                            <div className="bg-white p-6 rounded-card shadow-brand border-none text-center transition-all hover:shadow-elevated">
+                                <p className="text-[10px] text-t3 font-extrabold uppercase tracking-widest mb-2">BU AY / {config.labels.session?.toUpperCase() || 'SEANS'}</p>
+                                <p className="text-4xl font-extrabold text-navy tracking-tighter" style={{ fontWeight: 800 }}>{data?.stats?.attended || 0}</p>
+                                <div className="text-[10px] text-green font-bold mt-4 bg-green/10 inline-block px-3 py-1 rounded-badge uppercase tracking-wide">
+                                    Verimli Ay
+                                </div>
                             </div>
-                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center">
-                                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">KALORİ</p>
-                                <p className="text-3xl font-black text-slate-900">
-                                    {((data?.stats?.calorie || 0) / 1000).toFixed(1)}k
-                                </p>
-                                <p className="text-xs text-slate-500 font-medium mt-1">Tahmini Yakılan</p>
-                            </div>
+                            {config.features.measurements && (
+                                <div className="bg-white p-6 rounded-card shadow-brand border-none text-center transition-all hover:shadow-elevated">
+                                    <p className="text-[10px] text-t3 font-extrabold uppercase tracking-widest mb-2">KALORİ / YAKILAN</p>
+                                    <p className="text-4xl font-extrabold text-navy tracking-tighter" style={{ fontWeight: 800 }}>
+                                        {((data?.stats?.calorie || 0) / 1000).toFixed(1)}k
+                                    </p>
+                                    <div className="text-[10px] text-electric font-bold mt-4 bg-electric/10 inline-block px-3 py-1 rounded-badge uppercase tracking-wide">
+                                        Aktif Durum
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
 
                 {/* Footer / Upcoming Classes */}
-                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-slate-900 uppercase tracking-widest text-xs">Gelecek {config.labels.appointment}ler</h3>
-                        <Button variant="ghost" size="sm" className="text-xs text-blue-600" onClick={() => window.location.href = '/history'}>Tümünü Gör</Button>
+                <div className="bg-white rounded-card p-8 shadow-brand border-none">
+                    <div className="flex justify-between items-center mb-8">
+                        <h3 className="font-extrabold text-navy uppercase tracking-tight text-base">
+                            GELECEK {config.labels.appointment.toUpperCase()}LAR
+                        </h3>
+                        <Button variant="ghost" size="sm" className="text-xs font-bold text-electric hover:bg-bg" onClick={() => window.location.href = '/history'}>Tümünü Gör</Button>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         {data?.upcomingClasses?.length > 0 ? (
                             data.upcomingClasses.map((apt: any) => (
-                                <div key={apt.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                <div key={apt.id} className="flex items-center justify-between p-5 rounded-card bg-bg/40 border border-border-brand/20 transition-all hover:bg-bg/60">
                                     <div className="flex items-center gap-4">
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-slate-900">
+                                            <span className="text-sm font-extrabold text-navy tracking-tight" style={{ fontWeight: 800 }}>
                                                 {format(new Date(apt.start_time), 'd MMMM, EEEE', { locale: tr })}
                                             </span>
-                                            <span className="text-xs text-slate-500">{apt.service_id} • {apt.staff?.full_name}</span>
+                                            <span className="text-xs text-t2 font-medium opacity-70 mt-1 uppercase tracking-wide">{apt.service_id} • {apt.staff?.full_name}</span>
                                         </div>
                                     </div>
-                                    <span className="bg-white px-3 py-1 rounded-lg text-xs font-bold text-blue-600 shadow-sm border border-blue-100">
+                                    <div className="bg-white px-5 py-2 rounded-btn text-xs font-extrabold text-electric shadow-brand border border-border-brand/30">
                                         {format(new Date(apt.start_time), 'HH:mm')}
-                                    </span>
+                                    </div>
                                 </div>
                             ))
                         ) : (
-                            <div className="text-center py-8 text-slate-500 text-sm">
-                                Gelecek planlanmış {config.labels.appointment ? config.labels.appointment.toLowerCase() : 'randevu'}nuz bulunmuyor.
+                            <div className="text-center py-12 text-t3 text-sm font-medium bg-bg/20 rounded-card border-dashed border-2 border-border-brand/30">
+                                Henüz planlanmış {config.labels.appointment?.toLowerCase() || 'randevu'}nuz bulunmuyor.
                             </div>
                         )}
                     </div>

@@ -74,7 +74,7 @@ export default function MainDashboard({ role }: MainDashboardProps) {
       {/* Welcome Section */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Hoş geldin, {user?.firstName} {isStaff ? "" : "Hanım"}</h2>
+          <h2 className="text-2xl font-bold text-slate-800">Hoş geldin, {user?.firstName}</h2>
           <p className="text-slate-500 mt-1">
             İşte {new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })} günü için {config.labels.package?.toLowerCase()} ve {config.labels.appointment?.toLowerCase()} özetiniz.
           </p>

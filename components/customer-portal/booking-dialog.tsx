@@ -9,6 +9,7 @@ import { useState } from "react"
 import { bookAppointment } from "@/app/portal-actions"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
+import { useOrganization } from "@/providers/organization-provider"
 
 interface BookingDialogProps {
     open: boolean
@@ -18,6 +19,7 @@ interface BookingDialogProps {
 }
 
 export function BookingDialog({ open, onOpenChange, selectedClass, onSuccess }: BookingDialogProps) {
+    const { config } = useOrganization()
     const [loading, setLoading] = useState(false)
 
     if (!selectedClass) return null
@@ -59,7 +61,7 @@ export function BookingDialog({ open, onOpenChange, selectedClass, onSuccess }: 
                     </div>
                     <DialogTitle className="text-center text-xl">Rezervasyonu Onayla</DialogTitle>
                     <DialogDescription className="text-center">
-                        Aşağıdaki detaylara sahip ders için <strong>1 kredi</strong> kullanılacaktır.
+                        Aşağıdaki detaylara sahip {config.labels.appointment?.toLowerCase() || 'rezervasyon'} için <strong>1 {config.labels.session?.toLowerCase() || 'hak'}</strong> kullanılacaktır.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -69,8 +71,8 @@ export function BookingDialog({ open, onOpenChange, selectedClass, onSuccess }: 
                             <CheckCircle2 className="h-5 w-5 text-green-600" />
                         </div>
                         <div>
-                            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">DERS TÜRÜ</p>
-                            <p className="font-semibold text-slate-900">{selectedClass.service_id || "Reformer Pilates"}</p>
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">{config.labels.appointment?.toUpperCase() || 'İŞLEM'} TÜRÜ</p>
+                            <p className="font-semibold text-slate-900">{selectedClass.service_id || "Standart"}</p>
                         </div>
                     </div>
 
@@ -91,9 +93,9 @@ export function BookingDialog({ open, onOpenChange, selectedClass, onSuccess }: 
                             <User className="h-5 w-5 text-green-600" />
                         </div>
                         <div>
-                            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">EĞİTMEN</p>
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">{config.labels.instructor?.toUpperCase() || 'EĞİTMEN'}</p>
                             <p className="font-semibold text-slate-900">
-                                {selectedClass.staff?.full_name || "Eğitmen Atanmadı"}
+                                {selectedClass.staff?.full_name || `${config.labels.instructor || 'Eğitmen'} Atanmadı`}
                             </p>
                         </div>
                     </div>

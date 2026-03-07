@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { getCustomerActivePackages } from "@/app/package-actions"
 import { Button } from "@/components/ui/button"
 import { Plus, Package as PackageIcon, Calendar } from "lucide-react"
+import { useOrganization } from "@/providers/organization-provider"
 import { formatCurrency } from "@/lib/utils"
 import { PackageSaleDialog } from "@/components/packages/package-sale-dialog"
 import { Badge } from "@/components/ui/badge"
@@ -14,6 +15,7 @@ interface ActivePackagesListProps {
 }
 
 export function ActivePackagesList({ customerId, customerName }: ActivePackagesListProps) {
+    const { config } = useOrganization()
     const [packages, setPackages] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [saleDialogOpen, setSaleDialogOpen] = useState(false)
@@ -61,7 +63,7 @@ export function ActivePackagesList({ customerId, customerName }: ActivePackagesL
                             </div>
                             <div className="flex flex-col items-end gap-1">
                                 <Badge variant={pkg.remaining_credits > 0 ? "default" : "destructive"} className="text-xs">
-                                    {pkg.remaining_credits} / {pkg.initial_credits} Hak
+                                    {pkg.remaining_credits} / {pkg.initial_credits} {config.labels.session}
                                 </Badge>
                                 <span className="text-[10px] text-slate-400">
                                     {formatCurrency(pkg.price_paid)}

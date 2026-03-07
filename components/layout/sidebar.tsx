@@ -21,7 +21,10 @@ import { useOrganization } from "@/providers/organization-provider"
 export function Sidebar({ role }: { role?: string }) {
     const pathname = usePathname()
     const { user } = useUser()
-    const { config, organization } = useOrganization()
+    const { config, organization, user: dbUser } = useOrganization()
+
+    // Fallback to prop if provided, otherwise use the context user role
+    const activeRole = role || dbUser?.role || 'staff'
 
     const sidebarItems = [
         { icon: LayoutDashboard, label: "Dashboard", href: "/" },
@@ -37,7 +40,7 @@ export function Sidebar({ role }: { role?: string }) {
         if (!config.features.packages && item.href === '/packages') {
             return false
         }
-        if (role === 'staff') {
+        if (activeRole === 'staff') {
             return !['/settings', '/reports', '/packages'].includes(item.href)
         }
         return true
@@ -61,7 +64,7 @@ export function Sidebar({ role }: { role?: string }) {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                 </div>
-                <h1 className="font-bold text-xl text-slate-800 tracking-tight">YÖNETİM PANELİ</h1>
+                <h1 className="font-bold text-xl text-slate-800 tracking-tight">ASISTA</h1>
                 <p className="text-xs text-slate-400 font-medium">{industryLabel}</p>
             </div>
 
@@ -103,7 +106,7 @@ export function Sidebar({ role }: { role?: string }) {
                         {user?.fullName || "Kullanıcı"}
                     </p>
                     <p className="text-xs text-slate-500 truncate capitalize">
-                        {role === 'owner' ? 'Kurucu' : role === 'admin' ? 'Yönetici' : config.labels.instructor}
+                        {activeRole === 'owner' ? 'Kurucu' : activeRole === 'admin' ? 'Yönetici' : config.labels.instructor}
                     </p>
                 </div>
             </div>

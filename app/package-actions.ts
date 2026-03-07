@@ -9,6 +9,7 @@ import { getSession } from "./actions"
 
 export async function createPackage(data: {
     name: string,
+    type?: string,
     description?: string,
     price: number,
     credits: number,
@@ -41,6 +42,7 @@ export async function createPackage(data: {
         .insert({
             organization_id: userData.organization_id,
             name: data.name,
+            type: data.type || 'group',
             description: data.description,
             price: data.price,
             credits: data.credits,

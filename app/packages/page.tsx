@@ -16,6 +16,7 @@ import { useOrganization } from "@/providers/organization-provider"
 
 export default function PackagesPage() {
     const { config } = useOrganization()
+    const [mounted, setMounted] = useState(false)
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(true)
     const [packages, setPackages] = useState<any[]>([])
@@ -36,6 +37,7 @@ export default function PackagesPage() {
             }
         }
         checkAccess()
+        setMounted(true)
     }, [])
 
     const loadData = async () => {
@@ -57,10 +59,12 @@ export default function PackagesPage() {
         loadData()
     }, [])
 
+    if (!mounted) return null;
+
     return (
         <DashboardLayout
             title={`${config.labels.package} ve Satış Yönetimi`}
-            subtitle={`Salonunuzdaki ${config.labels.appointment?.toLowerCase()} ${config.labels.package?.toLowerCase()}lerini oluşturun, fiyatlandırın ve satış raporlarını inceleyin.`}
+            subtitle={`İşletmenizdeki ${config.labels.appointment?.toLowerCase()} ${config.labels.package?.toLowerCase()}lerini oluşturun, fiyatlandırın ve satış raporlarını inceleyin.`}
             headerAction={
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>

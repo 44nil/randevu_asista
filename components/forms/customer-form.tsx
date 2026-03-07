@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { createCustomer } from "@/app/actions"
+import { useOrganization } from "@/providers/organization-provider"
 
 // Base schema for all customers
 const baseSchema = z.object({
@@ -79,6 +80,7 @@ export interface CustomerFormProps {
 }
 
 export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }: CustomerFormProps) {
+    const { config } = useOrganization()
     const form = useForm<CustomerFormValues>({
         resolver: zodResolver(customerFormSchema),
         defaultValues: initialData || {
@@ -114,7 +116,7 @@ export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }:
         const result = await createCustomer(data);
 
         if (result.success) {
-            toast.success("Müşteri Başarıyla Kaydedildi", {
+            toast.success(`${config.labels.customer} Başarıyla Kaydedildi`, {
                 description: `${data.name} sisteme eklendi.`,
             })
             form.reset();
@@ -176,7 +178,7 @@ export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }:
                 {/* Dynamic Fields based on Industry */}
                 {industryType === "pilates" && (
                     <div className="border p-4 rounded-md space-y-4">
-                        <h3 className="font-semibold text-sm text-muted-foreground">Pilates Bilgileri</h3>
+                        <h3 className="font-semibold text-sm text-muted-foreground">{config.labels.customer} Detayları</h3>
                         <FormField
                             control={form.control}
                             name="metadata.health_notes"

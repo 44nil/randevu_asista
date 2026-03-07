@@ -59,7 +59,7 @@ export function CancelDialog({ open, onOpenChange, appointment, onSuccess }: Can
                 <div className="bg-slate-50 p-4 rounded-xl space-y-2 my-4">
                     <div>
                         <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">DERS</p>
-                        <p className="font-semibold text-slate-900">{appointment.service_id || "Reformer Pilates"}</p>
+                        <p className="font-semibold text-slate-900">{appointment.service_id || "Standart Seçim"}</p>
                     </div>
 
                     <div>

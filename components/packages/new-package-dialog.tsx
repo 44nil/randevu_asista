@@ -15,6 +15,7 @@ import { useOrganization } from "@/providers/organization-provider"
 
 const formSchema = z.object({
     name: z.string().min(1, { message: "Lütfen bir ad girin." }),
+    type: z.string().min(1, { message: "Lütfen bir tip seçin." }),
     sessions: z.string().optional(),
     price: z.string().min(1, { message: "Fiyat giriniz." }),
     duration_days: z.string().optional(),
@@ -33,6 +34,7 @@ export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
         resolver: zodResolver(formSchema),
         defaultValues: {
             name: "",
+            type: "standard",
             sessions: "1",
             price: "",
             duration_days: "365",
@@ -48,6 +50,7 @@ export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
 
             const result = await createPackage({
                 name: values.name,
+                type: values.type,
                 credits: parseInt(values.sessions || "1"),
                 price: parseFloat(values.price),
                 validity_days: values.duration_days ? parseInt(values.duration_days) : 365,
@@ -74,23 +77,37 @@ export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
                 <div className="grid grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
-                        name="name"
+                        name="type"
                         render={({ field }) => (
                             <FormItem>
+                                <FormLabel>{config.labels.package || 'Paket'} Tipi</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Tip seçin" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {config.packageTypes?.map(type => (
+                                            <SelectItem key={type.value} value={type.value}>
+                                                {type.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem className="col-span-2 md:col-span-1">
                                 <FormLabel>{config.labels.package || 'Tedavi'} Adı</FormLabel>
                                 <FormControl>
-                                    <div className="relative">
-                                        <Input
-                                            list="package-types"
-                                            placeholder={`Örn: Standart ${config.labels.package || 'Tedavi'}`}
-                                            {...field}
-                                        />
-                                        <datalist id="package-types">
-                                            {config.packageTypes?.map(type => (
-                                                <option key={type.value} value={type.label} />
-                                            ))}
-                                        </datalist>
-                                    </div>
+                                    <Input placeholder={`Örn: Standart ${config.labels.package || 'Tedavi'}`} {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

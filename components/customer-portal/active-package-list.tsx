@@ -38,7 +38,7 @@ export function ActivePackageList({ packages }: ActivePackageListProps) {
                             <div className="flex justify-between items-start mb-4">
                                 <div>
                                     <h4 className="font-bold text-lg text-slate-900">{sale.package?.name}</h4>
-                                    <p className="text-xs text-slate-500">Satın Alma: {new Date(sale.sale_date).toLocaleDateString('tr-TR')}</p>
+                                    <p className="text-xs text-slate-500">{config.labels.customer === 'Hasta' ? 'Tanımlanma' : 'Satın Alma'}: {new Date(sale.sale_date).toLocaleDateString('tr-TR')}</p>
                                 </div>
                                 <Badge className="bg-blue-600 hover:bg-blue-700">AKTİF</Badge>
                             </div>

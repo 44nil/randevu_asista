@@ -12,10 +12,12 @@ import { getAvailableClasses } from "@/app/portal-actions"
 import { addToWaitlist, removeFromWaitlist } from "@/app/waitlist-actions"
 import { BookingDialog } from "./booking-dialog"
 import { CancelDialog } from "./cancel-dialog"
+import { useOrganization } from "@/providers/organization-provider"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 export function ReservationCalendar() {
+    const { config } = useOrganization()
     const [currentDate, setCurrentDate] = useState(new Date())
     const [selectedDate, setSelectedDate] = useState(new Date())
     const [classes, setClasses] = useState<any[]>([])
@@ -139,8 +141,8 @@ export function ReservationCalendar() {
             {/* Header section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Haftalık Ders Programı</h1>
-                    <p className="text-slate-500 mt-2 text-base">Size en uygun dersi seçin ve yerinizi ayırtın.</p>
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Haftalık {config.labels.appointment || 'İşlem'} Programı</h1>
+                    <p className="text-slate-500 mt-2 text-base">Size en uygun {config.labels.appointment?.toLowerCase() || 'işlemi'} seçin ve yerinizi ayırtın.</p>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-xl py-2 px-4 flex items-center gap-3 shadow-sm min-w-[200px]">
                     <div className="bg-green-50 text-green-600 h-10 w-10 flex items-center justify-center rounded-lg">
@@ -182,11 +184,11 @@ export function ReservationCalendar() {
                                 <span className="text-green-500">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></svg>
                                 </span>
-                                <SelectValue placeholder="Ders Türü" />
+                                <SelectValue placeholder={`${config.labels.appointment || 'İşlem'} Türü`} />
                             </div>
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Tüm Dersler</SelectItem>
+                            <SelectItem value="all">Tüm {config.labels.appointment || 'İşlem'}ler</SelectItem>
                             {uniqueTypes.map((type: any, i) => (
                                 <SelectItem key={i} value={type}>{type}</SelectItem>
                             ))}
@@ -197,11 +199,11 @@ export function ReservationCalendar() {
                         <SelectTrigger className="w-full sm:w-[160px] h-11 bg-slate-50 border-0 rounded-xl font-medium text-slate-600 ring-0 focus:ring-0">
                             <div className="flex items-center gap-2">
                                 <span className="text-green-500"><User className="h-4 w-4" /></span>
-                                <SelectValue placeholder="Eğitmen" />
+                                <SelectValue placeholder={config.labels.instructor || 'Eğitmen'} />
                             </div>
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Tüm Eğitmenler</SelectItem>
+                            <SelectItem value="all">Tüm {config.labels.instructor || 'Eğitmen'}ler</SelectItem>
                             {uniqueInstructors.map((inst: any, i) => (
                                 <SelectItem key={i} value={inst}>{inst}</SelectItem>
                             ))}
@@ -327,7 +329,7 @@ export function ReservationCalendar() {
                                                                 `}>
                                                                     {group.totalSlots > 1
                                                                         ? 'GRUP'
-                                                                        : (group.service_id?.toLowerCase() === 'private' ? 'ÖZEL' : (group.service_id || 'DERS')).split(' ')[0]}
+                                                                        : (group.service_id?.toLowerCase() === 'private' ? 'ÖZEL' : (group.service_id || config.labels.appointment?.toUpperCase() || 'İŞLEM')).split(' ')[0]}
                                                                 </span>
                                                                 <span className="text-[10px] font-bold text-slate-400">
                                                                     {format(startDate, 'HH:mm')}
@@ -335,7 +337,7 @@ export function ReservationCalendar() {
                                                             </div>
 
                                                             <h4 className="text-xs font-bold mb-1 leading-tight text-slate-900 line-clamp-2">
-                                                                {group.service_id?.toLowerCase() === 'private' ? 'Özel Ders' : (group.service_id || "Genel Ders")}
+                                                                {group.service_id?.toLowerCase() === 'private' ? `Özel ${config.labels.appointment || 'İşlem'}` : (group.service_id || `Genel ${config.labels.appointment || 'İşlem'}`)}
                                                             </h4>
 
                                                             <div className="flex items-center gap-1.5 mb-2 shrink-0">
@@ -349,7 +351,7 @@ export function ReservationCalendar() {
                                                                     <div className="h-4 w-4 rounded-full bg-slate-200" />
                                                                 )}
                                                                 <span className="text-[10px] text-slate-500 truncate">
-                                                                    {group.staff?.full_name?.split(' ')[0] || "Eğitmen"}
+                                                                    {group.staff?.full_name?.split(' ')[0] || config.labels.instructor || "Eğitmen"}
                                                                 </span>
                                                             </div>
 
@@ -412,7 +414,7 @@ export function ReservationCalendar() {
             <div className="flex items-center gap-6 px-4">
                 <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                    <span className="text-sm font-medium text-slate-600">Müsait Ders</span>
+                    <span className="text-sm font-medium text-slate-600">Müsait {config.labels.appointment || 'İşlem'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-slate-300" />

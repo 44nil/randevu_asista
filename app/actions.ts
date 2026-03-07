@@ -53,6 +53,26 @@ export const getUserProfile = cache(async () => {
                 } else {
                     console.error("Failed to link account:", error);
                 }
+            } else {
+                // FALLBACK: User doesn't exist at all, and webhook might have failed/been skipped locally
+                console.log(`Creating fallback user for ${userEmail} because webhook was missed`);
+                const fullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || userEmail.split('@')[0];
+                const { data: newUser, error: createError } = await supabase
+                    .from('users')
+                    .insert({
+                        clerk_id: userId,
+                        email: userEmail,
+                        full_name: fullName,
+                        role: 'owner' // Make them an owner by default so they can create an org
+                    })
+                    .select()
+                    .single();
+
+                if (!createError) {
+                    profile = newUser;
+                } else {
+                    console.error("Failed to fallback create user:", createError);
+                }
             }
         }
     } else {

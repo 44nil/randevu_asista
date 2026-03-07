@@ -49,7 +49,7 @@ export function HistoryTable({ history }: HistoryTableProps) {
         try {
             const result = await requestCancellation(selectedAppointmentId, cancellationReason)
             if (result.success) {
-                toast.success("İptal talebi alındı. Eğitmen onayladığında size bilgi verilecektir.")
+                toast.success(`İptal talebi alındı. ${config.labels.instructor} onayladığında size bilgi verilecektir.`)
                 setIsDialogOpen(false)
                 router.refresh()
             } else {
@@ -68,7 +68,7 @@ export function HistoryTable({ history }: HistoryTableProps) {
             <div className="flex flex-col sm:flex-row gap-4 justify-between">
                 <div className="relative w-full sm:w-96">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-                    <Input placeholder={`${config.labels.appointment}, eğitmen veya ${config.labels.package.toLowerCase()} ara...`} className="pl-9 bg-white" />
+                    <Input placeholder={`${config.labels.appointment}, ${config.labels.instructor.toLowerCase()} veya ${config.labels.package.toLowerCase()} ara...`} className="pl-9 bg-white" />
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" className="gap-2 text-slate-600">
@@ -89,7 +89,7 @@ export function HistoryTable({ history }: HistoryTableProps) {
                         <TableRow>
                             <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider">Tarih & Saat</TableHead>
                             <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider">{config.labels.appointment} Adı</TableHead>
-                            <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider">Eğitmen</TableHead>
+                            <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider">{config.labels.instructor}</TableHead>
                             <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider">Kullanılan {config.labels.package}</TableHead>
                             <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider">Durum</TableHead>
                             <TableHead className="font-bold text-xs uppercase text-slate-400 tracking-wider text-right">İşlem</TableHead>
@@ -128,7 +128,7 @@ export function HistoryTable({ history }: HistoryTableProps) {
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-normal hover:bg-slate-200">
-                                                Genel Paket
+                                                Standart {config.labels.package || 'Hizmet'}
                                             </Badge>
                                         </TableCell>
                                         <TableCell>
@@ -176,7 +176,7 @@ export function HistoryTable({ history }: HistoryTableProps) {
                     <DialogHeader>
                         <DialogTitle>{config.labels.appointment} İptal Talebi</DialogTitle>
                         <DialogDescription>
-                            Lütfen {config.labels.appointment.toLowerCase()}i iptal etme nedeninizi belirtiniz. Eğitmeniniz talebinizi inceleyecektir.
+                            Lütfen {config.labels.appointment.toLowerCase()} iptal etme nedeninizi belirtiniz. {config.labels.instructor} talebinizi inceleyecektir.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
