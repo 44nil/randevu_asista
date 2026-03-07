@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { Logo } from "@/components/ui/logo"
 import { Button } from "@/components/ui/button"
 import {
     LayoutDashboard,
@@ -55,22 +56,16 @@ export function Sidebar({ role }: { role?: string }) {
     const industryLabel = industryLabelMap[organization?.industry_type || 'general'] || 'YÖNETİM PANELİ'
 
     return (
-        <div className="w-64 border-r bg-white h-screen flex flex-col fixed left-0 top-0 overflow-y-auto z-10 transition-all duration-300">
+        <div className="w-64 border-r border-r-indigo-900/30 bg-navy h-screen flex flex-col fixed left-0 top-0 overflow-y-auto z-10 transition-all duration-300">
             {/* Logo Area */}
             <div className="p-6">
-                <div className="flex items-center gap-2 p-2 bg-blue-600 rounded-lg w-fit text-white mb-2 shadow-md shadow-blue-200">
-                    {/* Placeholder logo icon */}
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                </div>
-                <h1 className="font-bold text-xl text-slate-800 tracking-tight">ASISTA</h1>
-                <p className="text-xs text-slate-400 font-medium">{industryLabel}</p>
+                <Logo variant="dark" className="mb-2" />
+                <p className="text-[10px] text-blue-200 font-bold tracking-widest">{industryLabel}</p>
             </div>
 
             {/* Navigation */}
             <nav className="flex-1 px-4 space-y-1">
-                <div className="text-xs font-bold text-slate-400 mb-4 px-2 uppercase tracking-wider">MENÜ</div>
+                <div className="text-xs font-bold text-white mb-4 px-2 uppercase tracking-wider">MENÜ</div>
                 {filteredItems.map((item) => {
                     const isActive = pathname === item.href
                     return (
@@ -78,10 +73,10 @@ export function Sidebar({ role }: { role?: string }) {
                             <div className={cn(
                                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                                 isActive
-                                    ? "bg-blue-50 text-blue-700 shadow-sm border border-blue-100"
-                                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                    ? "bg-electric text-white shadow-sm shadow-blue-900/50"
+                                    : "text-slate-300 hover:bg-white/5 hover:text-white"
                             )}>
-                                <item.icon className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                                <item.icon className={cn("h-4 w-4", isActive ? "text-white" : "text-slate-400")} />
                                 {item.label}
                             </div>
                         </Link>
@@ -91,21 +86,21 @@ export function Sidebar({ role }: { role?: string }) {
 
             {/* Quick Actions */}
             <div className="p-4 mt-auto">
-                <div className="text-xs font-semibold text-slate-400 mb-2 px-2">HIZLI İŞLEMLER</div>
-                <Button variant="outline" className="w-full justify-start gap-2 bg-slate-50 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-600">
+                <div className="text-xs font-bold text-white mb-2 px-2 uppercase tracking-wider">HIZLI İŞLEMLER</div>
+                <Button variant="outline" className="w-full justify-start gap-2 bg-white/5 border-dashed border-slate-600 hover:border-electric hover:bg-electric text-slate-300 hover:text-white transition-all">
                     <Plus className="h-4 w-4" />
                     {config.labels.createAppointment}
                 </Button>
             </div>
 
             {/* Profile */}
-            <div className="flex items-center gap-3">
+            <div className="p-4 border-t border-white/10 flex items-center gap-3">
                 <UserButton afterSignOutUrl="/sign-in" />
                 <div className="flex-1 overflow-hidden">
-                    <p className="text-sm font-medium text-slate-900 truncate">
+                    <p className="text-sm font-medium text-white truncate">
                         {user?.fullName || "Kullanıcı"}
                     </p>
-                    <p className="text-xs text-slate-500 truncate capitalize">
+                    <p className="text-xs text-slate-400 truncate capitalize">
                         {activeRole === 'owner' ? 'Kurucu' : activeRole === 'admin' ? 'Yönetici' : config.labels.instructor}
                     </p>
                 </div>

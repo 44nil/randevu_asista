@@ -25,8 +25,18 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { userId } = await auth();
-  const profile = await getUserProfile();
+  let userId = null;
+  let profile = null;
+
+  try {
+    const authObj = await auth();
+    userId = authObj.userId;
+    if (userId) {
+      profile = await getUserProfile();
+    }
+  } catch (error) {
+    // Clerk throws if middleware wasn't run. This happens when Next.js renders the 404 page for a missing static asset (like favicon.ico), which bypasses middleware.
+  }
 
   return (
     <ClerkProvider>

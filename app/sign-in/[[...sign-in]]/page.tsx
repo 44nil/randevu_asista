@@ -1,5 +1,6 @@
 import { SignIn } from "@clerk/nextjs";
-import { CalendarDays, CheckCircle2, TrendingUp } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 
 export default function Page() {
     return (
@@ -12,11 +13,8 @@ export default function Page() {
                 <div className="absolute right-0 bottom-0 -z-10 h-[310px] w-[310px] rounded-full bg-purple-500 opacity-20 blur-[100px]"></div>
 
                 <div className="relative z-10 max-w-md px-10 text-white space-y-8">
-                    <div className="space-y-2">
-                        <div className="h-12 w-12 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm border border-white/20 mb-6">
-                            <CalendarDays className="h-6 w-6 text-white" />
-                        </div>
-                        <h1 className="text-4xl font-bold tracking-tight">Randevu Asista</h1>
+                    <div className="space-y-4">
+                        <Logo variant="dark" text="Randevu Asista" textClassName="text-4xl normal-case" iconClassName="w-12 h-12" />
                         <p className="text-zinc-400 text-lg leading-relaxed">
                             İşletmenizi yönetmenin en modern yolu. Randevularınızı, müşterilerinizi ve ödemelerinizi tek bir yerden kontrol edin.
                         </p>
@@ -61,8 +59,8 @@ export default function Page() {
             {/* Sağ Taraf - Giriş Formu */}
             <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-background">
                 <div className="w-full max-w-md space-y-8">
-                    <div className="lg:hidden text-center space-y-2 mb-8">
-                        <h1 className="text-2xl font-bold">Randevu Asista</h1>
+                    <div className="lg:hidden flex flex-col items-center text-center space-y-4 mb-8">
+                        <Logo variant="light" text="Randevu Asista" textClassName="text-2xl normal-case" />
                         <p className="text-muted-foreground">Hesabınıza giriş yapın</p>
                     </div>
 

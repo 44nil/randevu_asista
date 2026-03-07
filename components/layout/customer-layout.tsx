@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { LayoutDashboard, Calendar, History, User, LogOut, Settings, TrendingUp } from "lucide-react"
 import { SignOutButton } from "@clerk/nextjs"
+import { Logo } from "@/components/ui/logo"
 import { useOrganization } from "@/providers/organization-provider"
 
 export function CustomerLayout({ children }: { children: React.ReactNode }) {
@@ -25,10 +26,8 @@ export function CustomerLayout({ children }: { children: React.ReactNode }) {
             <aside className="w-64 bg-white border-r hidden md:flex flex-col">
                 <div className="p-6">
                     <div className="flex items-center gap-3">
-                        {/* Placeholder Logo */}
-                        <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
-                            E
-                        </div>
+                        {/* Brand Logo */}
+                        <Logo showText={false} className="shrink-0" iconClassName="w-10 h-10" />
                         <div>
                             <h1 className="font-bold text-slate-800 leading-tight">
                                 {config.labels.customer === 'Hasta' ? 'Mydent Clinic' : 'Elite Pilates'}
