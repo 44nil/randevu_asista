@@ -19,7 +19,7 @@ export function PackageStatus({ pkg, lastUsage = [] }: PackageStatusProps) {
             <Card className="h-full border-dashed">
                 <CardContent className="flex flex-col items-center justify-center h-full py-8 text-center text-slate-500">
                     <p>Aktif {config.labels.package ? config.labels.package.toLowerCase() : 'hizmet'}iniz bulunmuyor.</p>
-                    <p className="text-sm mt-2">Yeni bir {config.labels.package ? config.labels.package.toLowerCase() : 'hizmet'} tanımlatmak için {config.labels.customer === 'Hasta' ? 'klinik' : 'stüdyo'} ile iletişime geçin.</p>
+                    <p className="text-sm mt-2">Yeni bir {config.labels.package ? config.labels.package.toLowerCase() : 'hizmet'} tanımlatmak için {config.labels.customer === 'Hasta' ? 'klinik' : config.labels.customer === 'Üye' ? 'stüdyo' : 'salon'} ile iletişime geçin.</p>
                 </CardContent>
             </Card>
         )

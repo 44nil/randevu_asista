@@ -45,3 +45,10 @@ export function parseUTCTime(dateStr: string | null | undefined): Date {
     return new Date(dateStr);
   }
 }
+
+export function pluralizeTurkish(word: string): string {
+  if (!word) return "";
+  const lastVowel = word.match(/[aıoueiöü]/gi)?.pop()?.toLowerCase();
+  const suffix = ['a', 'ı', 'o', 'u'].includes(lastVowel || '') ? 'lar' : 'ler';
+  return `${word}${suffix}`;
+}

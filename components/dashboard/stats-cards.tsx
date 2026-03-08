@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, CalendarCheck, CreditCard, Package } from "lucide-react"
 import { useOrganization } from "@/providers/organization-provider"
+import { pluralizeTurkish } from "@/lib/utils"
 
 interface StatsCardsProps {
     data: {
@@ -35,7 +36,7 @@ export function StatsCards({ data }: StatsCardsProps) {
                 <CardContent>
                     <div className="text-2xl font-bold">{data.totalMembers}</div>
                     <p className="text-xs text-green-600 font-medium flex items-center">
-                        Aktif {config.labels.customer.toLowerCase()}ler
+                        Aktif {pluralizeTurkish(config.labels.customer.toLowerCase())}
                     </p>
                 </CardContent>
             </Card>
@@ -43,7 +44,7 @@ export function StatsCards({ data }: StatsCardsProps) {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground uppercase">
-                        Bugünkü {config.labels.appointment}lar
+                        Bugünkü {pluralizeTurkish(config.labels.appointment)}
                     </CardTitle>
                     <div className="h-8 w-8 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center">
                         <CalendarCheck className="h-4 w-4" />
@@ -80,7 +81,7 @@ export function StatsCards({ data }: StatsCardsProps) {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground uppercase">
-                            Aktif {config.labels.package}ler
+                            Aktif {pluralizeTurkish(config.labels.package)}
                         </CardTitle>
                         <div className="h-8 w-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center">
                             <Package className="h-4 w-4" />
@@ -89,7 +90,7 @@ export function StatsCards({ data }: StatsCardsProps) {
                     <CardContent>
                         <div className="text-2xl font-bold">{data.activePackages}</div>
                         <p className="text-xs text-purple-600 font-medium flex items-center">
-                            Satışa açık {config.labels.package.toLowerCase()}ler
+                            Satışa açık {pluralizeTurkish(config.labels.package.toLowerCase())}
                         </p>
                     </CardContent>
                 </Card>

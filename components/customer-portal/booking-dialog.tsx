@@ -72,7 +72,7 @@ export function BookingDialog({ open, onOpenChange, selectedClass, onSuccess }: 
                         </div>
                         <div>
                             <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">{config.labels.appointment?.toUpperCase() || 'İŞLEM'} TÜRÜ</p>
-                            <p className="font-semibold text-slate-900">{selectedClass.service_id || "Standart"}</p>
+                            <p className="font-semibold text-slate-900">{selectedClass.service_id || `Standart ${config.labels.appointment}`}</p>
                         </div>
                     </div>
 
@@ -106,7 +106,7 @@ export function BookingDialog({ open, onOpenChange, selectedClass, onSuccess }: 
                         </div>
                         <div>
                             <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">KONUM</p>
-                            <p className="font-semibold text-slate-900">Stüdyo A (Ana Salon)</p>
+                            <p className="font-semibold text-slate-900">Ana Şube</p>
                         </div>
                     </div>
                 </div>

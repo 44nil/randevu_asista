@@ -9,6 +9,7 @@ import { useState } from "react"
 import { cancelAppointment } from "@/app/portal-actions"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
+import { useOrganization } from "@/providers/organization-provider"
 
 interface CancelDialogProps {
     open: boolean
@@ -18,6 +19,7 @@ interface CancelDialogProps {
 }
 
 export function CancelDialog({ open, onOpenChange, appointment, onSuccess }: CancelDialogProps) {
+    const { config } = useOrganization()
     const [loading, setLoading] = useState(false)
 
     if (!appointment) return null
@@ -52,14 +54,14 @@ export function CancelDialog({ open, onOpenChange, appointment, onSuccess }: Can
                     </div>
                     <DialogTitle className="text-center text-xl">Rezervasyonu İptal Et</DialogTitle>
                     <DialogDescription className="text-center">
-                        Bu dersi iptal etmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+                        Bu {config.labels.appointment.toLowerCase()}i iptal etmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="bg-slate-50 p-4 rounded-xl space-y-2 my-4">
                     <div>
-                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">DERS</p>
-                        <p className="font-semibold text-slate-900">{appointment.service_id || "Standart Seçim"}</p>
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">{config.labels.appointment.toUpperCase()}</p>
+                        <p className="font-semibold text-slate-900">{appointment.service_id || `Standart ${config.labels.appointment}`}</p>
                     </div>
 
                     <div>

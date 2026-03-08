@@ -321,3 +321,154 @@ export async function fixUserConnection() {
     revalidatePath('/');
     return { success: true };
 }
+
+// --- STAFF SCHEDULE ACTIONS ---
+
+export async function getStaffSchedule(staffId: string) {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, data: null, error: "Unauthorized" };
+
+    const supabase = supabaseAdmin;
+
+    const { data, error } = await supabase
+        .from('staff_schedules')
+        .select('*')
+        .eq('user_id', staffId)
+        .order('day_of_week', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching staff schedule:", error);
+        return { success: false, data: null, error: error.message };
+    }
+
+    return { success: true, data: data || [] };
+}
+
+export async function updateStaffSchedule(staffId: string, schedules: any[]) {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const supabase = supabaseAdmin;
+
+    // Verify current user has permission (owner or admin)
+    const { data: myProfile } = await supabase
+        .from('users')
+        .select('role, organization_id')
+        .eq('clerk_id', userId)
+        .single();
+    
+    if (!myProfile || !['owner', 'admin'].includes(myProfile.role)) {
+        return { success: false, error: "Yetkisiz islem" };
+    }
+
+    // Prepare data to upsert
+    const upsertData = schedules.map(schedule => ({
+        user_id: staffId,
+        organization_id: myProfile.organization_id,
+        day_of_week: schedule.day_of_week,
+        start_time: schedule.start_time,
+        end_time: schedule.end_time,
+        is_working_day: schedule.is_working_day
+    }));
+
+    // Perform upsert (using the unique constraint on user_id + day_of_week)
+    const { error } = await supabase
+        .from('staff_schedules')
+        .upsert(upsertData, { onConflict: 'user_id,day_of_week' });
+
+    if (error) {
+        console.error("Error upserting schedules:", error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/settings/staff');
+    return { success: true };
+}
+
+// --- STAFF TIME OFF ACTIONS ---
+
+export async function getStaffTimeOffs(staffId: string) {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, data: null, error: "Unauthorized" };
+
+    const supabase = supabaseAdmin;
+
+    const { data, error } = await supabase
+        .from('staff_time_offs')
+        .select('*')
+        .eq('user_id', staffId)
+        .order('start_date', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching time offs:", error);
+        return { success: false, data: null, error: error.message };
+    }
+
+    return { success: true, data: data || [] };
+}
+
+export async function createStaffTimeOff(staffId: string, payload: { start_date: string, end_date: string, reason: string }) {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const supabase = supabaseAdmin;
+
+    const { data: myProfile } = await supabase
+        .from('users')
+        .select('role, organization_id')
+        .eq('clerk_id', userId)
+        .single();
+    
+    if (!myProfile || !['owner', 'admin'].includes(myProfile.role)) {
+        return { success: false, error: "Yetkisiz islem" };
+    }
+
+    const { error } = await supabase
+        .from('staff_time_offs')
+        .insert({
+            user_id: staffId,
+            organization_id: myProfile.organization_id,
+            start_date: payload.start_date,
+            end_date: payload.end_date,
+            reason: payload.reason
+        });
+
+    if (error) {
+        console.error("Error creating time off:", error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/settings/staff');
+    return { success: true };
+}
+
+export async function deleteStaffTimeOff(timeOffId: string) {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const supabase = supabaseAdmin;
+
+    const { data: myProfile } = await supabase
+        .from('users')
+        .select('role, organization_id')
+        .eq('clerk_id', userId)
+        .single();
+    
+    if (!myProfile || !['owner', 'admin'].includes(myProfile.role)) {
+        return { success: false, error: "Yetkisiz islem" };
+    }
+
+    const { error } = await supabase
+        .from('staff_time_offs')
+        .delete()
+        .eq('id', timeOffId)
+        .eq('organization_id', myProfile.organization_id); // Security check
+
+    if (error) {
+        console.error("Error deleting time off:", error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/settings/staff');
+    return { success: true };
+}

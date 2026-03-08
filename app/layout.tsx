@@ -40,9 +40,10 @@ export default async function RootLayout({
 
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <body
           className={`${plusJakartaSans.variable} font-sans antialiased bg-[#E6ECF8]`}
+          suppressHydrationWarning
         >
           <OrganizationProvider
             organization={profile?.organization || null}

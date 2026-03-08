@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChevronLeft, ChevronRight, X, User, Users } from "lucide-react"
 import { format, addDays, startOfWeek, endOfWeek, isSameDay } from "date-fns"
 import { tr } from "date-fns/locale"
-import { cn, parseUTCTime } from "@/lib/utils"
+import { cn, parseUTCTime, pluralizeTurkish } from "@/lib/utils"
 import { getAvailableClasses } from "@/app/portal-actions"
 import { addToWaitlist, removeFromWaitlist } from "@/app/waitlist-actions"
 import { BookingDialog } from "./booking-dialog"
@@ -152,8 +152,8 @@ export function ReservationCalendar() {
                         </div>
                     </div>
                     <div>
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">KALAN KREDİ</div>
-                        <div className="font-bold text-lg text-slate-900 leading-none mt-0.5">12 Seans</div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">KALAN {config.labels.session?.toUpperCase() || 'HAK'}</div>
+                        <div className="font-bold text-lg text-slate-900 leading-none mt-0.5">-- {config.labels.session || 'Hak'}</div>
                     </div>
                 </div>
             </div>
@@ -188,7 +188,7 @@ export function ReservationCalendar() {
                             </div>
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Tüm {config.labels.appointment || 'İşlem'}ler</SelectItem>
+                            <SelectItem value="all">Tüm {pluralizeTurkish(config.labels.appointment || 'İşlem')}</SelectItem>
                             {uniqueTypes.map((type: any, i) => (
                                 <SelectItem key={i} value={type}>{type}</SelectItem>
                             ))}
@@ -203,7 +203,7 @@ export function ReservationCalendar() {
                             </div>
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Tüm {config.labels.instructor || 'Eğitmen'}ler</SelectItem>
+                            <SelectItem value="all">Tüm {pluralizeTurkish(config.labels.instructor || 'Eğitmen')}</SelectItem>
                             {uniqueInstructors.map((inst: any, i) => (
                                 <SelectItem key={i} value={inst}>{inst}</SelectItem>
                             ))}

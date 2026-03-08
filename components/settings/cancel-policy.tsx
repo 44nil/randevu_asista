@@ -8,11 +8,14 @@ import { updateConfiguration } from "@/app/settings/actions"
 import { toast } from "sonner"
 import { Loader2, AlertCircle } from "lucide-react"
 
+import { useOrganization } from "@/providers/organization-provider"
+
 interface CancelPolicyProps {
     settings: any
 }
 
 export function CancelPolicy({ settings }: CancelPolicyProps) {
+    const { config: industryConfig } = useOrganization()
     const [loading, setLoading] = useState(false)
     const [hours, setHours] = useState(settings?.cancellation_policy?.hours || "24")
 
@@ -57,7 +60,7 @@ export function CancelPolicy({ settings }: CancelPolicyProps) {
                         <span className="text-sm text-slate-500">saat</span>
                     </div>
                     <p className="text-xs text-slate-500">
-                        Dersin başlamasına bu süreden az kaldıysa üyenin bakiyesi iade edilmez.
+                        {industryConfig.labels.appointment} başlamasına bu süreden az kaldıysa {industryConfig.labels.customer.toLowerCase()}nin bakiyesi iade edilmez.
                     </p>
                 </div>
 

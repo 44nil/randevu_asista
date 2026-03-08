@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { updateUserProfile } from "@/app/profile-actions"
 import { Loader2, User, Activity, Bell, Camera, Shield, Lock } from "lucide-react"
+import { useOrganization } from "@/providers/organization-provider"
 import { cn } from "@/lib/utils"
 
 interface ProfileFormProps {
@@ -18,6 +19,7 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ user }: ProfileFormProps) {
+    const { config: industryConfig } = useOrganization()
     const [loading, setLoading] = useState(false)
     const [formData, setFormData] = useState({
         full_name: user?.full_name || "",
@@ -79,8 +81,8 @@ export function ProfileForm({ user }: ProfileFormProps) {
                             </AvatarFallback>
                         </Avatar>
 
-                        <h3 className="font-bold text-slate-900">{formData.full_name || "İsimsiz Üye"}</h3>
-                        <p className="text-xs text-blue-600 font-bold uppercase tracking-wider mt-1">Premium Üye</p>
+                        <h3 className="font-bold text-slate-900">{formData.full_name || `İsimsiz ${industryConfig.labels.customer}`}</h3>
+                        <p className="text-xs text-blue-600 font-bold uppercase tracking-wider mt-1">Premium {industryConfig.labels.customer}</p>
 
                         <Button className="w-full mt-6" size="sm" onClick={() => scrollToSection('personal')}>
                             <User className="mr-2 h-4 w-4" /> Kişisel Bilgiler
@@ -105,7 +107,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
                 {/* Quote Box */}
                 <div className="bg-blue-50/80 p-4 rounded-xl border border-blue-100 text-xs text-blue-800 italic leading-relaxed">
-                    &quot;Profilinizi güncel tutmak, eğitmenlerinizin size en uygun antrenmanı hazırlamasına yardımcı olur.&quot;
+                    &quot;Profilinizi güncel tutmak, {industryConfig.labels.instructor.toLowerCase()}lerinizin size en uygun hizmeti hazırlamasına yardımcı olur.&quot;
                 </div>
             </div>
 
@@ -128,7 +130,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                         </div>
                         <div className="text-center md:text-left space-y-2">
                             <h2 className="text-2xl font-bold text-slate-900">{formData.full_name}</h2>
-                            <p className="text-slate-500">Üyelik No: #{user?.id?.substring(0, 6)} • Kayıt: {new Date(user?.created_at).toLocaleDateString("tr-TR", { month: 'long', year: 'numeric' })}</p>
+                            <p className="text-slate-500">{industryConfig.labels.customer} No: #{user?.id?.substring(0, 6)} • Kayıt: {new Date(user?.created_at).toLocaleDateString("tr-TR", { month: 'long', year: 'numeric' })}</p>
                             <Button variant="outline" size="sm" className="mt-2 text-slate-600">
                                 Fotoğrafı Değiştir
                             </Button>
@@ -189,7 +191,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                     <Card className="border shadow-sm rounded-xl bg-white">
                         <CardHeader className="pb-4 flex flex-row items-center justify-between">
                             <CardTitle className="text-lg font-bold text-slate-800">Sağlık & Fiziksel Notlar</CardTitle>
-                            <span className="text-[10px] bg-amber-100 text-amber-700 px-2.5 py-1 rounded-md font-bold uppercase tracking-wide">Eğitmenlerle Paylaşılır</span>
+                            <span className="text-[10px] bg-amber-100 text-amber-700 px-2.5 py-1 rounded-md font-bold uppercase tracking-wide">{industryConfig.labels.instructor}larla Paylaşılır</span>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-2">
@@ -215,8 +217,8 @@ export function ProfileForm({ user }: ProfileFormProps) {
                         <CardContent className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="font-bold text-slate-700">Ders Hatırlatmaları</p>
-                                    <p className="text-sm text-slate-500">Dersinizden 1 saat önce bildirim alın.</p>
+                                    <p className="font-bold text-slate-700">{industryConfig.labels.appointment} Hatırlatmaları</p>
+                                    <p className="text-sm text-slate-500">{industryConfig.labels.appointment}ınızdan 1 saat önce bildirim alın.</p>
                                 </div>
                                 <Switch
                                     checked={formData.notification_preferences.reminders}
@@ -228,7 +230,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="font-bold text-slate-700">Kampanya & Duyurular</p>
-                                    <p className="text-sm text-slate-500">Yeni paketler ve indirimlerden haberdar olun.</p>
+                                    <p className="text-sm text-slate-500">Yeni {industryConfig.labels.package.toLowerCase()}ler ve indirimlerden haberdar olun.</p>
                                 </div>
                                 <Switch
                                     checked={formData.notification_preferences.campaigns}

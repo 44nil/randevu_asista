@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getCustomers } from "@/app/actions"
+import { getCustomers, getStaffSchedule, getStaffTimeOffs } from "@/app/actions"
+import { getStaffList } from "@/app/staff-actions"
 import { createClassSession } from "@/app/appointment-actions"
 import { toast } from "sonner"
 import { useEffect, useState, useMemo } from "react"
@@ -27,6 +28,7 @@ import { useOrganization } from "@/providers/organization-provider"
 const appointmentFormSchema = z.object({
     title: z.string().min(2, "Başlık en az 2 karakter olmalıdır"),
     customer_ids: z.array(z.string()), // Optional - can be empty
+    instructor_id: z.string().optional(), // Added
     appointment_date: z.date(),
     time: z.string().min(1, "Saat seçiniz"),
     duration: z.string(),
@@ -41,11 +43,16 @@ type AppointmentFormValues = z.infer<typeof appointmentFormSchema>
 interface AppointmentFormProps {
     onSuccess?: () => void
     defaultDate?: Date
+    staffId?: string
 }
 
-export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps) {
+export function AppointmentForm({ onSuccess, defaultDate, staffId }: AppointmentFormProps) {
     const { config, organization } = useOrganization()
     const [customers, setCustomers] = useState<any[]>([])
+    const [staffList, setStaffList] = useState<any[]>([])
+    const [schedules, setSchedules] = useState<any[]>([])
+    const [timeOffs, setTimeOffs] = useState<any[]>([])
+    const [availableTimes, setAvailableTimes] = useState<string[]>([])
     const [loading, setLoading] = useState(false)
     const [mounted, setMounted] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")
@@ -77,10 +84,112 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
             appointment_date: defaultDate || new Date(),
             time: "09:00",
             customer_ids: [],
+            instructor_id: staffId || "",
             is_recurring: false,
             recurring_weeks: "4"
         },
     })
+
+    // Load customers and staff schedule
+    useEffect(() => {
+        const loadInitialData = async () => {
+            const [custRes, staffRes] = await Promise.all([
+                getCustomers(),
+                getStaffList()
+            ])
+            if (custRes.success) setCustomers(custRes.data)
+            if (staffRes.success) setStaffList(staffRes.data || [])
+        }
+        loadInitialData()
+    }, [])
+
+    const currentInstructorId = form.watch("instructor_id")
+
+    // Update schedules and timeoffs when instructor changes
+    useEffect(() => {
+        if (currentInstructorId) {
+            getStaffSchedule(currentInstructorId).then(res => {
+                if (res.success) setSchedules(res.data || [])
+            })
+            getStaffTimeOffs(currentInstructorId).then(res => {
+                if (res.success) setTimeOffs(res.data || [])
+            })
+        } else {
+            setSchedules([])
+            setTimeOffs([])
+        }
+    }, [currentInstructorId])
+
+    const selectedDate = form.watch("appointment_date")
+
+    // Update available times based on selected date and staff schedule
+    useEffect(() => {
+        if (!selectedDate) {
+            setAvailableTimes([])
+            return
+        }
+
+        if (!currentInstructorId || schedules.length === 0) {
+            // Check organization-level working hours for general availability
+            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            const dayName = dayNames[selectedDate.getDay()];
+            const orgDayConfig = (organization as any)?.settings?.working_hours?.[dayName];
+
+            if (orgDayConfig && orgDayConfig.isOpen === false) {
+                setAvailableTimes([]);
+                form.setValue("time", "");
+                return;
+            }
+
+            const times = []
+            // If org day config exists and is open, use its times, otherwise use default 8-22
+            let startH = 8, endH = 22;
+            if (orgDayConfig?.isOpen && orgDayConfig.open && orgDayConfig.close) {
+                [startH] = orgDayConfig.open.split(':').map(Number);
+                [endH] = orgDayConfig.close.split(':').map(Number);
+            }
+
+            for (let h = startH; h <= endH; h++) {
+                times.push(`${h.toString().padStart(2, '0')}:00`)
+                times.push(`${h.toString().padStart(2, '0')}:30`)
+            }
+            setAvailableTimes(times)
+            return
+        }
+
+        const dayOfWeek = selectedDate.getDay()
+        const daySchedule = schedules.find(s => s.day_of_week === dayOfWeek)
+
+        if (!daySchedule || !daySchedule.is_working_day) {
+            setAvailableTimes([])
+            form.setValue("time", "")
+            return
+        }
+
+        const times = []
+        const [startH, startM] = daySchedule.start_time.split(':').map(Number)
+        const [endH, endM] = daySchedule.end_time.split(':').map(Number)
+
+        let currentH = startH
+        let currentM = startM
+
+        while (currentH < endH || (currentH === endH && currentM <= endM)) {
+            times.push(`${currentH.toString().padStart(2, '0')}:${currentM.toString().padStart(2, '0')}`)
+            currentM += 30
+            if (currentM >= 60) {
+                currentM -= 60
+                currentH += 1
+            }
+        }
+
+        setAvailableTimes(times)
+
+        const currentTime = form.getValues("time")
+        if (currentTime && !times.includes(currentTime)) {
+            form.setValue("time", "")
+        }
+
+    }, [selectedDate, schedules, currentInstructorId, form])
 
     const selectedCustomerIds = form.watch("customer_ids")
     const isRecurring = form.watch("is_recurring")
@@ -143,6 +252,7 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
 
             const result = await createClassSession({
                 customer_ids: data.customer_ids,
+                instructor_id: data.instructor_id,
                 appointment_date: startDateTime.toISOString(),
                 duration_minutes: parseInt(data.duration),
                 type: data.type,
@@ -226,112 +336,249 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                         )}
                     />
 
-                    <FormItem className="flex flex-col justify-end">
-                        <FormLabel className="mb-2">{config.labels.customer} Seçimi</FormLabel>
-                        <Popover open={isPickerOpen} onOpenChange={setIsPickerOpen}>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    aria-expanded={isPickerOpen}
-                                    className="w-full justify-between font-bold h-12 rounded-input border-[1.5px] border-border-brand bg-white text-navy hover:bg-bg hover:border-electric/30 transition-all px-4 shadow-sm"
-                                >
-                                    <span className="truncate">
-                                        {selectedCustomerIds.length > 0
-                                            ? customers.find((c) => c.id === selectedCustomerIds[0])?.name
-                                            : `${config.labels.customer} Seç...`}
-                                    </span>
-                                    <Search className="ml-2 h-4 w-4 shrink-0 opacity-50 text-electric" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[300px] p-0" align="start">
-                                <div className="flex flex-col p-2 space-y-2">
-                                    <div className="flex items-center border rounded-md px-3 bg-slate-50">
-                                        <Search className="h-4 w-4 mr-2 opacity-50" />
-                                        <Input
-                                            placeholder="İsim veya telefon..."
-                                            className="border-0 focus-visible:ring-0 bg-transparent h-9 p-0"
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                        />
-                                    </div>
+                    {/* Instructor Selection (Only for Admin/Owner) */}
+                    {['owner', 'admin'].includes((organization as any)?.role || 'owner') && staffList.length > 0 ? (
+                        <FormField
+                            control={form.control}
+                            name="instructor_id"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="mb-2">{config.labels.instructor}</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                                        <FormControl>
+                                            <SelectTrigger className="h-12 rounded-input border-[1.5px] border-border-brand bg-white font-medium text-navy hover:bg-bg transition-all shadow-sm">
+                                                <SelectValue placeholder={`${config.labels.instructor} Seçiniz`} />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {staffList.map(s => (
+                                                <SelectItem key={s.id} value={s.id}>
+                                                    {s.full_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    ) : (
+                        <FormItem className="flex flex-col justify-end">
+                            <FormLabel className="mb-2">{config.labels.customer} Seçimi</FormLabel>
+                            <Popover open={isPickerOpen} onOpenChange={setIsPickerOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={isPickerOpen}
+                                        className="w-full justify-between font-bold h-12 rounded-input border-[1.5px] border-border-brand bg-white text-navy hover:bg-bg hover:border-electric/30 transition-all px-4 shadow-sm"
+                                    >
+                                        <span className="truncate">
+                                            {selectedCustomerIds.length > 0
+                                                ? customers.find((c) => c.id === selectedCustomerIds[0])?.name
+                                                : `${config.labels.customer} Seç...`}
+                                        </span>
+                                        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50 text-electric" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0" align="start">
+                                    <div className="flex flex-col p-2 space-y-2">
+                                        <div className="flex items-center border rounded-md px-3 bg-slate-50">
+                                            <Search className="h-4 w-4 mr-2 opacity-50" />
+                                            <Input
+                                                placeholder="İsim veya telefon..."
+                                                className="border-0 focus-visible:ring-0 bg-transparent h-9 p-0"
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                            />
+                                        </div>
 
-                                    <div className="max-h-[200px] overflow-y-auto space-y-1">
-                                        {filteredCustomers.length > 0 ? (
-                                            filteredCustomers.map((c) => (
-                                                <div
-                                                    key={c.id}
-                                                    className={cn(
-                                                        "flex items-center justify-between px-2 py-1.5 rounded-sm cursor-pointer hover:bg-slate-100 text-sm",
-                                                        selectedCustomerIds.includes(c.id) && "bg-blue-50 text-blue-700 font-medium"
-                                                    )}
-                                                    onClick={() => handleAddCustomer(c.id)}
-                                                >
-                                                    <div className="flex flex-col">
-                                                        <span>{c.name}</span>
-                                                        <span className="text-xs opacity-50">{c.phone}</span>
+                                        <div className="max-h-[200px] overflow-y-auto space-y-1">
+                                            {filteredCustomers.length > 0 ? (
+                                                filteredCustomers.map((c) => (
+                                                    <div
+                                                        key={c.id}
+                                                        className={cn(
+                                                            "flex items-center justify-between px-2 py-1.5 rounded-sm cursor-pointer hover:bg-slate-100 text-sm",
+                                                            selectedCustomerIds.includes(c.id) && "bg-blue-50 text-blue-700 font-medium"
+                                                        )}
+                                                        onClick={() => handleAddCustomer(c.id)}
+                                                    >
+                                                        <div className="flex flex-col">
+                                                            <span>{c.name}</span>
+                                                            <span className="text-xs opacity-50">{c.phone}</span>
+                                                        </div>
+                                                        {selectedCustomerIds.includes(c.id) && <Check className="h-4 w-4" />}
                                                     </div>
-                                                    {selectedCustomerIds.includes(c.id) && <Check className="h-4 w-4" />}
+                                                ))
+                                            ) : (
+                                                <div className="py-6 text-center text-sm text-slate-500 italic">
+                                                    {config.labels.customer} bulunamadı
                                                 </div>
-                                            ))
-                                        ) : (
-                                            <div className="py-6 text-center text-sm text-slate-500 italic">
-                                                {config.labels.customer} bulunamadı
-                                            </div>
-                                        )}
-                                    </div>
+                                            )}
+                                        </div>
 
-                                    <div className="border-t pt-2">
-                                        <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
-                                            <DialogTrigger asChild>
-                                                <Button variant="ghost" className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-medium h-9">
-                                                    <UserPlus className="mr-2 h-4 w-4" />
-                                                    Yeni {config.labels.customer} Ekle
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="max-w-md">
-                                                <DialogHeader>
-                                                    <DialogTitle>Yeni {config.labels.customer} Kaydı</DialogTitle>
-                                                </DialogHeader>
-                                                <CustomerForm
-                                                    industryType={(organization?.industry_type as any) || "general"}
-                                                    onSuccess={() => {
-                                                        loadCustomers()
-                                                        setIsCustomerDialogOpen(false)
-                                                    }}
-                                                />
-                                            </DialogContent>
-                                        </Dialog>
+                                        <div className="border-t pt-2">
+                                            <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="ghost" className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-medium h-9">
+                                                        <UserPlus className="mr-2 h-4 w-4" />
+                                                        Yeni {config.labels.customer} Ekle
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="max-w-md">
+                                                    <DialogHeader>
+                                                        <DialogTitle>Yeni {config.labels.customer} Kaydı</DialogTitle>
+                                                    </DialogHeader>
+                                                    <CustomerForm
+                                                        industryType={(organization?.industry_type as any) || "general"}
+                                                        onSuccess={() => {
+                                                            loadCustomers()
+                                                            setIsCustomerDialogOpen(false)
+                                                        }}
+                                                    />
+                                                </DialogContent>
+                                            </Dialog>
+                                        </div>
                                     </div>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
+                                </PopoverContent>
+                            </Popover>
 
-                        {/* Selected Customers Display (Especially for Group Classes) */}
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {selectedCustomerIds.map((id: string) => {
-                                const customer = customers.find(c => c.id === id)
-                                return (
-                                    <Badge key={id} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-100">
-                                        {customer?.name || "Bilinmeyen"}
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-4 w-4 p-0 hover:bg-transparent text-blue-400 hover:text-red-500 rounded-full"
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                handleRemoveCustomer(id)
-                                            }}
-                                        >
-                                            <X className="h-3 w-3" />
-                                        </Button>
-                                    </Badge>
-                                )
-                            })}
-                        </div>
-                    </FormItem>
+                            {/* Selected Customers Display (Especially for Group Classes) */}
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {selectedCustomerIds.map((id: string) => {
+                                    const customer = customers.find(c => c.id === id)
+                                    return (
+                                        <Badge key={id} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-100">
+                                            {customer?.name || "Bilinmeyen"}
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-4 w-4 p-0 hover:bg-transparent text-blue-400 hover:text-red-500 rounded-full"
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    handleRemoveCustomer(id)
+                                                }}
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </Button>
+                                        </Badge>
+                                    )
+                                })}
+                            </div>
+                        </FormItem>
+                    )}
                 </div>
+
+                {/* Always show customer selection if instructor selection replaced its sibling above */}
+                {['owner', 'admin'].includes((organization as any)?.role || 'owner') && (
+                    <div className="grid grid-cols-1 gap-6">
+                        <FormItem className="flex flex-col">
+                            <FormLabel className="mb-2">{config.labels.customer} Seçimi</FormLabel>
+                            <Popover open={isPickerOpen} onOpenChange={setIsPickerOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={isPickerOpen}
+                                        className="w-full justify-between font-bold h-12 rounded-input border-[1.5px] border-border-brand bg-white text-navy hover:bg-bg hover:border-electric/30 transition-all px-4 shadow-sm"
+                                    >
+                                        <span className="truncate">
+                                            {selectedCustomerIds.length > 0
+                                                ? customers.find((c) => c.id === selectedCustomerIds[0])?.name
+                                                : `${config.labels.customer} Seç...`}
+                                        </span>
+                                        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50 text-electric" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0" align="start">
+                                    <div className="flex flex-col p-2 space-y-2">
+                                        <div className="flex items-center border rounded-md px-3 bg-slate-50">
+                                            <Search className="h-4 w-4 mr-2 opacity-50" />
+                                            <Input
+                                                placeholder="İsim veya telefon..."
+                                                className="border-0 focus-visible:ring-0 bg-transparent h-9 p-0"
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="max-h-[200px] overflow-y-auto space-y-1">
+                                            {filteredCustomers.length > 0 ? (
+                                                filteredCustomers.map((c) => (
+                                                    <div
+                                                        key={c.id}
+                                                        className={cn(
+                                                            "flex items-center justify-between px-2 py-1.5 rounded-sm cursor-pointer hover:bg-slate-100 text-sm",
+                                                            selectedCustomerIds.includes(c.id) && "bg-blue-50 text-blue-700 font-medium"
+                                                        )}
+                                                        onClick={() => handleAddCustomer(c.id)}
+                                                    >
+                                                        <div className="flex flex-col">
+                                                            <span>{c.name}</span>
+                                                            <span className="text-xs opacity-50">{c.phone}</span>
+                                                        </div>
+                                                        {selectedCustomerIds.includes(c.id) && <Check className="h-4 w-4" />}
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="py-6 text-center text-sm text-slate-500 italic">
+                                                    {config.labels.customer} bulunamadı
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="border-t pt-2">
+                                            <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="ghost" className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-medium h-9">
+                                                        <UserPlus className="mr-2 h-4 w-4" />
+                                                        Yeni {config.labels.customer} Ekle
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="max-w-md">
+                                                    <DialogHeader>
+                                                        <DialogTitle>Yeni {config.labels.customer} Kaydı</DialogTitle>
+                                                    </DialogHeader>
+                                                    <CustomerForm
+                                                        industryType={(organization?.industry_type as any) || "general"}
+                                                        onSuccess={() => {
+                                                            loadCustomers()
+                                                            setIsCustomerDialogOpen(false)
+                                                        }}
+                                                    />
+                                                </DialogContent>
+                                            </Dialog>
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {selectedCustomerIds.map((id: string) => {
+                                    const customer = customers.find(c => c.id === id)
+                                    return (
+                                        <Badge key={id} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-100">
+                                            {customer?.name || "Bilinmeyen"}
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-4 w-4 p-0 hover:bg-transparent text-blue-400 hover:text-red-500 rounded-full"
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    handleRemoveCustomer(id)
+                                                }}
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </Button>
+                                        </Badge>
+                                    )
+                                })}
+                            </div>
+                        </FormItem>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
@@ -364,9 +611,38 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                                             mode="single"
                                             selected={field.value}
                                             onSelect={field.onChange}
-                                            disabled={(date) =>
-                                                date < new Date(new Date().setHours(0, 0, 0, 0))
-                                            }
+                                            disabled={(date) => {
+                                                const isPast = date < new Date(new Date().setHours(0, 0, 0, 0))
+                                                if (isPast) return true
+
+                                                // 0. Check Organization-wide Working Hours
+                                                if ((organization as any)?.settings?.working_hours) {
+                                                    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+                                                    const dayName = dayNames[date.getDay()]
+                                                    const orgDayConfig = (organization as any).settings.working_hours[dayName]
+                                                    if (orgDayConfig && orgDayConfig.isOpen === false) return true
+                                                }
+
+                                                if (currentInstructorId) {
+                                                    // 1. Check Time Offs (hard overrides working hours)
+                                                    if (timeOffs.length > 0) {
+                                                        const dateWithoutTime = new Date(date).setHours(0, 0, 0, 0);
+                                                        const hasTimeOff = timeOffs.some(t => {
+                                                            const s = new Date(t.start_date).setHours(0, 0, 0, 0);
+                                                            const e = new Date(t.end_date).setHours(23, 59, 59, 999);
+                                                            return dateWithoutTime >= s && dateWithoutTime <= e;
+                                                        });
+                                                        if (hasTimeOff) return true;
+                                                    }
+
+                                                    // 2. Check Weekly Schedule
+                                                    if (schedules.length > 0) {
+                                                        const daySchedule = schedules.find(s => s.day_of_week === date.getDay())
+                                                        if (daySchedule && !daySchedule.is_working_day) return true
+                                                    }
+                                                }
+                                                return false
+                                            }}
                                             locale={tr}
                                             initialFocus
                                         />
@@ -390,11 +666,17 @@ export function AppointmentForm({ onSuccess, defaultDate }: AppointmentFormProps
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {Array.from({ length: 15 }, (_, i) => i + 8).map(hour => (
-                                            <SelectItem key={hour} value={`${hour.toString().padStart(2, '0')}:00`}>
-                                                {hour.toString().padStart(2, '0')}:00
+                                        {availableTimes.length > 0 ? (
+                                            availableTimes.map(time => (
+                                                <SelectItem key={time} value={time}>
+                                                    {time}
+                                                </SelectItem>
+                                            ))
+                                        ) : (
+                                            <SelectItem value="none" disabled>
+                                                Müsait Saat Yok
                                             </SelectItem>
-                                        ))}
+                                        )}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />

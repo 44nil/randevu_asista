@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, Shield, User } from "lucide-react"
+import { Plus, Edit, Trash2, Shield, User, CalendarClock } from "lucide-react"
+import Link from "next/link"
 import { getStaffList, deleteStaff } from "@/app/staff-actions"
 import { StaffDialog } from "./staff-dialog"
 import { toast } from "sonner"
@@ -102,6 +103,11 @@ export function StaffList() {
                                     )}
                                 </div>
                                 <div className="flex items-center gap-2">
+                                    <Link href={`/settings/staff/${s.id}/schedule`}>
+                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="Çalışma Saatleri">
+                                            <CalendarClock className="h-4 w-4" />
+                                        </Button>
+                                    </Link>
                                     <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500" onClick={() => handleEdit(s)}>
                                         <Edit className="h-4 w-4" />
                                     </Button>

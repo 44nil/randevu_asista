@@ -8,13 +8,13 @@ import { useOrganization } from "@/providers/organization-provider"
 const getAnnouncements = (labels: any) => [
     {
         title: "Bayram Tatili Çalışma Saatleri",
-        desc: `${labels.appointment} süresince işletmemiz 2 gün kapalı olacaktır. Tüm ${labels.appointment?.toLowerCase()}larınız için önceden planlama yapmanızı rica ederiz.`,
+        desc: `Bayram tatili süresince işletmemiz 2 gün kapalı olacaktır. Tüm ${labels.appointment?.toLowerCase()}larınız için önceden planlama yapmanızı rica ederiz.`,
         time: "2 SAAT ÖNCE",
         icon: Calendar,
         color: "bg-blue-50 text-blue-600"
     },
     {
-        title: `Yeni ${labels.package} Seansları Başlıyor!`,
+        title: `Yeni ${labels.package} ${labels.session}ları Başlıyor!`,
         desc: `Önümüzdeki aydan itibaren yeni ${labels.package?.toLowerCase()} programlarımız aktif olacaktır.`,
         time: "DÜN",
         icon: Flame,

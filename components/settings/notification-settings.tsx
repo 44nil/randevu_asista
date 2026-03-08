@@ -9,11 +9,14 @@ import { updateConfiguration } from "@/app/settings/actions"
 import { toast } from "sonner"
 import { Loader2, Bell, Mail, CreditCard } from "lucide-react"
 
+import { useOrganization } from "@/providers/organization-provider"
+
 interface NotificationSettingsProps {
     settings: any
 }
 
 export function NotificationSettings({ settings }: NotificationSettingsProps) {
+    const { config: industryConfig } = useOrganization()
     const [loading, setLoading] = useState(false)
     const [config, setConfig] = useState({
         sms_enabled: settings?.sms_enabled || false,
@@ -61,9 +64,9 @@ export function NotificationSettings({ settings }: NotificationSettingsProps) {
             <CardContent className="space-y-6">
                 <div className="flex items-center justify-between space-x-2 border-b pb-4">
                     <div className="space-y-1">
-                        <Label htmlFor="sms_enabled" className="text-base font-medium">Randevu Hatırlatıcı (SMS)</Label>
+                        <Label htmlFor="sms_enabled" className="text-base font-medium">{industryConfig.labels.appointment} Hatırlatıcı (SMS)</Label>
                         <p className="text-sm text-slate-500">
-                            Ders saati gelmeden 2 saat önce üyeye otomatik SMS gönder.
+                            {industryConfig.labels.appointment} saati gelmeden 2 saat önce {industryConfig.labels.customer.toLowerCase()}ye otomatik SMS gönder.
                         </p>
                     </div>
                     <Switch
@@ -77,7 +80,7 @@ export function NotificationSettings({ settings }: NotificationSettingsProps) {
                     <div className="space-y-1">
                         <Label htmlFor="email_reminders" className="text-base font-medium">Yeni Rezervasyon Bildirimi (E-posta)</Label>
                         <p className="text-sm text-slate-500">
-                            Yeni bir ders kaydı yapıldığında size e-posta gönderilir.
+                            Yeni bir {industryConfig.labels.appointment.toLowerCase()} kaydı yapıldığında size e-posta gönderilir.
                         </p>
                     </div>
                     <Switch
@@ -91,7 +94,7 @@ export function NotificationSettings({ settings }: NotificationSettingsProps) {
                     <div className="space-y-1">
                         <Label htmlFor="payment_reminders" className="text-base font-medium">Ödeme Hatırlatıcıları</Label>
                         <p className="text-sm text-slate-500">
-                            Paket bitimine 1 ders kala üyeye hatırlatma gönder.
+                            Paket bitimine 1 {industryConfig.labels.appointment.toLowerCase()} kala {industryConfig.labels.customer.toLowerCase()}ye hatırlatma gönder.
                         </p>
                     </div>
                     <Switch

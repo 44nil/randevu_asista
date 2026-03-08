@@ -9,12 +9,14 @@ import { TrendingUp, TrendingDown, Minus, Calendar, Activity, Weight, Ruler } fr
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { format } from "date-fns"
 import { tr } from "date-fns/locale"
+import { useOrganization } from "@/providers/organization-provider"
 
 interface DevelopmentTrackerProps {
     customerId: string
 }
 
 export function DevelopmentTracker({ customerId }: DevelopmentTrackerProps) {
+    const { config: industryConfig } = useOrganization()
     const [measurements, setMeasurements] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -237,7 +239,7 @@ export function DevelopmentTracker({ customerId }: DevelopmentTrackerProps) {
                         <CardHeader>
                             <div className="flex items-center gap-2">
                                 <Activity className="h-5 w-5 text-green-500" />
-                                <CardTitle>Eğitmen Notları</CardTitle>
+                                <CardTitle>{industryConfig.labels.instructor} Notları</CardTitle>
                             </div>
                         </CardHeader>
                         <CardContent>

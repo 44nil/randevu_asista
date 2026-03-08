@@ -9,6 +9,7 @@ import { AppointmentForm } from "@/components/forms/appointment-form"
 import { useState } from "react"
 
 import { useOrganization } from "@/providers/organization-provider"
+import { useSession } from "@clerk/nextjs"
 
 interface ProgramClientProps {
     role?: string
@@ -16,6 +17,7 @@ interface ProgramClientProps {
 
 export function ProgramClient({ role }: ProgramClientProps) {
     const { config } = useOrganization()
+    const { session } = useSession()
     const [open, setOpen] = useState(false)
 
     return (
@@ -34,7 +36,7 @@ export function ProgramClient({ role }: ProgramClientProps) {
                         <DialogHeader>
                             <DialogTitle>{config.labels.createAppointment}</DialogTitle>
                         </DialogHeader>
-                        <AppointmentForm onSuccess={() => {
+                        <AppointmentForm staffId={session?.user?.id} onSuccess={() => {
                             setOpen(false)
                             window.location.reload()
                         }} />

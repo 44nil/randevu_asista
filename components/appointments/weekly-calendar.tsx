@@ -29,6 +29,9 @@ import { cn, parseUTCTime } from "@/lib/utils"
 import { useOrganization } from "@/providers/organization-provider"
 import { getAppointments } from "@/app/appointment-actions"
 import { AppointmentForm } from "@/components/forms/appointment-form"
+import { useSession } from "@clerk/nextjs"
+import { getStaffList } from "@/app/staff-actions"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type ClassType = 'reformer' | 'mat' | 'private'
 
@@ -48,6 +51,7 @@ interface Appointment {
 
 export function WeeklyCalendar() {
     const { config } = useOrganization()
+    const { session } = useSession()
     const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
     const [appointments, setAppointments] = useState<Appointment[]>([])
     const [loading, setLoading] = useState(true)
@@ -59,16 +63,30 @@ export function WeeklyCalendar() {
         totalClasses: 0,
         availableHours: 0
     })
+    const [staffList, setStaffList] = useState<any[]>([])
+    const [selectedStaffId, setSelectedStaffId] = useState<string>("all")
 
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
     const weekEnd = addDays(weekStart, 6)
     const timeSlots = Array.from({ length: 14 }, (_, i) => i + 8) // 08:00 - 21:00
 
     useEffect(() => {
+        const fetchStaff = async () => {
+            const res = await getStaffList()
+            if (res.success) setStaffList(res.data || [])
+        }
+        fetchStaff()
+    }, [])
+
+    useEffect(() => {
         const fetchAppointments = async () => {
             setLoading(true)
             try {
-                const res = await getAppointments(weekStart.toISOString(), weekEnd.toISOString())
+                const res = await getAppointments(
+                    weekStart.toISOString(),
+                    weekEnd.toISOString(),
+                    selectedStaffId === "all" ? undefined : selectedStaffId
+                )
                 const resStats: any = { success: true, data: { stats: { totalMembers: 0 } } } // Placeholder, logic from original
 
                 if (res.success && res.data) {
@@ -138,7 +156,7 @@ export function WeeklyCalendar() {
         }
 
         fetchAppointments()
-    }, [weekStart, config.labels.customer])
+    }, [weekStart, config.labels.customer, selectedStaffId])
 
     const nextWeek = () => setWeekStart(addWeeks(weekStart, 1))
     const prevWeek = () => setWeekStart(subWeeks(weekStart, 1))
@@ -171,6 +189,22 @@ export function WeeklyCalendar() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {staffList.length > 0 && (
+                        <div className="mr-2 flex items-center gap-2">
+                            <Filter className="h-4 w-4 text-t3" />
+                            <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+                                <SelectTrigger className="w-[180px] h-9 bg-bg border-none shadow-none text-xs font-bold text-navy">
+                                    <SelectValue placeholder="Personel Filtrele" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white border-border-brand/30 shadow-elevated">
+                                    <SelectItem value="all" className="text-xs font-medium">Tüm Ekip</SelectItem>
+                                    {staffList.map(s => (
+                                        <SelectItem key={s.id} value={s.id} className="text-xs font-medium">{s.full_name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                     <div className="flex items-center bg-bg rounded-[10px] p-1">
                         <Button variant="ghost" size="icon" onClick={prevWeek} className="h-8 w-8 text-navy hover:bg-surface rounded-btn"> <ChevronLeft className="h-4 w-4" /> </Button>
                         <Button variant="ghost" size="icon" onClick={nextWeek} className="h-8 w-8 text-navy hover:bg-surface rounded-btn"> <ChevronRight className="h-4 w-4" /> </Button>
@@ -185,7 +219,7 @@ export function WeeklyCalendar() {
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 border-none rounded-card">
-                            <AppointmentForm onSuccess={() => setWeekStart(startOfWeek(weekStart, { weekStartsOn: 1 }))} />
+                            <AppointmentForm staffId={session?.user?.id} onSuccess={() => setWeekStart(startOfWeek(weekStart, { weekStartsOn: 1 }))} />
                         </DialogContent>
                     </Dialog>
                 </div>

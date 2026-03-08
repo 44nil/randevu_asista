@@ -39,7 +39,7 @@ export function HeroSection({ userName }: { userName: string }) {
                 <div className="pt-4">
                     <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white hover:text-slate-900 backdrop-blur-sm gap-2 rounded-full h-12 px-6">
                         <PlayCircle className="h-5 w-5" />
-                        {isDental ? 'Tedavi Rehberini Gör' : isHair ? 'Bakım Rehberini Gör' : 'Antrenman Rehberini Gör'}
+                        {isDental ? 'Tedavi Rehberini Gör' : isHair ? 'Bakım Rehberini Gör' : isPilates ? 'Antrenman Rehberini Gör' : 'Hizmet Rehberini Gör'}
                     </Button>
                 </div>
             </div>

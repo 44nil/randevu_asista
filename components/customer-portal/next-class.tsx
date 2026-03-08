@@ -23,7 +23,7 @@ export function NextClass({ appointment }: NextClassProps) {
                 <h3 className="text-navy font-extrabold text-sm uppercase tracking-widest mb-2" style={{ fontWeight: 800 }}>Programın Boş</h3>
                 <p className="text-t2 text-xs font-medium max-w-[200px] leading-relaxed">Yeni bir {config.labels.appointment?.toLowerCase() || 'randevu'} alarak başlayabilirsin.</p>
                 <Button className="mt-8 bg-navy text-white text-[11px] font-bold h-9 px-6 rounded-btn shadow-elevated hover:bg-navy-mid transition-all uppercase tracking-wider">
-                    Randevu Al
+                    {config.labels.createAppointment}
                 </Button>
             </div>
         )

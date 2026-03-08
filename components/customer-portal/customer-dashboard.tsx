@@ -12,6 +12,7 @@ import { getCustomerDashboardData } from "@/app/portal-actions"
 import { Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import { tr } from "date-fns/locale"
+import { pluralizeTurkish } from "@/lib/utils"
 
 import { useOrganization } from "@/providers/organization-provider"
 
@@ -124,7 +125,7 @@ export function CustomerDashboard() {
                 <div className="bg-white rounded-card p-8 shadow-brand border-none">
                     <div className="flex justify-between items-center mb-8">
                         <h3 className="font-extrabold text-navy uppercase tracking-tight text-base">
-                            GELECEK {config.labels.appointment.toUpperCase()}LAR
+                            GELECEK {pluralizeTurkish(config.labels.appointment || 'Randevu').toUpperCase()}
                         </h3>
                         <Button variant="ghost" size="sm" className="text-xs font-bold text-electric hover:bg-bg" onClick={() => window.location.href = '/history'}>Tümünü Gör</Button>
                     </div>

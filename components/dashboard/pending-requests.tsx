@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation"
 import { processCancellation } from "@/app/admin-actions"
 import { useState } from "react"
 import { Loader2 } from "lucide-react"
+import { useOrganization } from "@/providers/organization-provider"
 
 interface Request {
     id: string
@@ -23,6 +24,7 @@ interface Request {
 }
 
 export function PendingRequestsPanel({ requests }: { requests: Request[] }) {
+    const { config } = useOrganization()
     const router = useRouter()
     const [processingId, setProcessingId] = useState<string | null>(null)
 
@@ -72,7 +74,7 @@ export function PendingRequestsPanel({ requests }: { requests: Request[] }) {
                                 <Calendar className="h-4 w-4" />
                                 {format(new Date(req.start_time), 'd MMMM HH:mm', { locale: tr })}
                                 <span className="text-xs bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">
-                                    {req.service_id || "Genel Ders"}
+                                    {req.service_id || `Genel ${config.labels.appointment}`}
                                 </span>
                             </div>
                             {req.cancellation_reason && (
