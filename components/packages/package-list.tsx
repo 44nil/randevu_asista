@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Edit, Trash2 } from "lucide-react"
 import { deletePackage } from "@/app/package-actions"
 import { toast } from "sonner"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, cn } from "@/lib/utils"
 
 interface Package {
     id: string
@@ -39,26 +39,41 @@ export function PackageList({ data, onRefresh }: PackageListProps) {
     }
 
     const getTypeBadge = (type: string) => {
-        const found = config.packageTypes?.find(t => t.value === type)
-        let label = found?.label || type
+        // Look in both lists to find the label
+        const foundInPackages = config.packageTypes?.find(t => t.value === type)
+        const foundInAppointments = config.appointmentTypes?.find(t => t.value === type)
 
-        // Add robust fallback for old database rows that default to "group"
-        if (!found) {
-            if (config.labels.customer === 'Hasta') {
-                label = type === 'group' ? 'Genel Tedavi' : type;
-            } else {
-                label = type === 'group' ? 'Grup' : type === 'private' ? 'Özel' : type;
-            }
+        let label = foundInPackages?.label || foundInAppointments?.label || type
+
+        // Global Turkish mapping for common English legacy values
+        const translations: Record<string, string> = {
+            'treatment': 'Tedavi',
+            'checkup': 'Muayene',
+            'cleaning': 'Temizlik',
+            'standard': 'Genel',
+            'group': config.labels.customer === 'Hasta' ? 'Tedavi' : 'Grup', // Map group to Tedavi for Dental
+            'private': 'Özel',
+            'reformer': 'Reformer',
+            'mat': 'Mat Pilates'
         }
 
-        // Simple consistent coloring based on type value length/hash could be better, 
-        // but for now let's map known ones and fallback to gray
-        switch (type?.toLowerCase()) {
-            case 'private': case 'premium': return <Badge variant="secondary" className="bg-blue-100 text-blue-700">{label}</Badge>
-            case 'group': case 'standard': return <Badge variant="secondary" className="bg-purple-100 text-purple-700">{label}</Badge>
-            case 'duo': case 'discount': return <Badge variant="secondary" className="bg-orange-100 text-orange-700">{label}</Badge>
-            default: return <Badge variant="outline" className="bg-slate-100 text-slate-700 border-none">{label}</Badge>
+        if (label === type && translations[type?.toLowerCase()]) {
+            label = translations[type.toLowerCase()]
         }
+
+        // Consistent coloring based on type
+        const typeLower = type?.toLowerCase()
+        if (typeLower === 'private' || typeLower === 'premium' || typeLower === 'checkup') {
+            return <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100">{label}</Badge>
+        }
+        if (typeLower === 'group' || typeLower === 'standard' || typeLower === 'treatment') {
+            return <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-100">{label}</Badge>
+        }
+        if (typeLower === 'duo' || typeLower === 'cleaning') {
+            return <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-100">{label}</Badge>
+        }
+
+        return <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">{label}</Badge>
     }
 
     return (
@@ -90,36 +105,55 @@ export function PackageList({ data, onRefresh }: PackageListProps) {
                             </TableCell>
                         </TableRow>
                     ) : (
-                        data.map((pkg) => (
-                            <TableRow key={pkg.id} className="hover:bg-slate-50/50">
-                                <TableCell className="font-semibold text-slate-900">{pkg.name}</TableCell>
-                                <TableCell>{getTypeBadge(pkg.type)}</TableCell>
-                                <TableCell>{pkg.credits} {config.labels.session}</TableCell>
-                                <TableCell>{formatCurrency(pkg.price / (pkg.credits || 1))}</TableCell>
-                                <TableCell className="font-bold text-slate-900">{formatCurrency(pkg.price)}</TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`h-2 w-2 rounded-full ${pkg.active ? 'bg-green-500' : 'bg-slate-300'}`} />
-                                        <span className="text-xs font-medium text-slate-600">{pkg.active ? 'AKTİF' : 'PASİF'}</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex justify-end gap-2">
-                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-blue-600">
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-8 w-8 text-slate-400 hover:text-red-600"
-                                            onClick={() => handleDelete(pkg.id, pkg.name)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))
+                        data.map((pkg, index) => {
+                            const isDuplicate = data.some((item, i) =>
+                                i !== index &&
+                                item.name === pkg.name &&
+                                item.type === pkg.type &&
+                                item.credits === pkg.credits &&
+                                item.price === pkg.price
+                            )
+
+                            return (
+                                <TableRow key={pkg.id} className={cn("hover:bg-slate-50/50", isDuplicate && "bg-orange-50/30")}>
+                                    <TableCell className="font-semibold text-slate-900">
+                                        <div className="flex flex-col gap-1">
+                                            {pkg.name}
+                                            {isDuplicate && (
+                                                <span className="text-[10px] text-orange-600 font-bold flex items-center gap-1">
+                                                    <Edit className="h-3 w-3" /> TEKRARLAYAN KAYIT
+                                                </span>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>{getTypeBadge(pkg.type)}</TableCell>
+                                    <TableCell>{pkg.credits} {config.labels.session}</TableCell>
+                                    <TableCell>{formatCurrency(pkg.price / (pkg.credits || 1))}</TableCell>
+                                    <TableCell className="font-bold text-slate-900">{formatCurrency(pkg.price)}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`h-2 w-2 rounded-full ${pkg.active ? 'bg-green-500' : 'bg-slate-300'}`} />
+                                            <span className="text-xs font-medium text-slate-600">{pkg.active ? 'AKTİF' : 'PASİF'}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex justify-end gap-2">
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-blue-600">
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-8 w-8 text-slate-400 hover:text-red-600"
+                                                onClick={() => handleDelete(pkg.id, pkg.name)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })
                     )}
                 </TableBody>
             </Table>

@@ -161,13 +161,14 @@ export async function checkInstructorAvailability(instructorId: string, startTim
 
 // RENAMED/REFACTORED: Creates a Class Session (and optionally books users)
 export async function createClassSession(data: {
-    customer_ids?: string[] // Optional now
-    instructor_id?: string // Added: Optional instructor override
-    appointment_date: string // ISO string start time
+    title?: string // Added
+    customer_ids?: string[]
+    instructor_id?: string
+    appointment_date: string
     duration_minutes: number
-    type: string // "reformer" | "mat" | "private"
-    recurring_weeks: number // Default 1
-    capacity?: number // Default 1 or 3 depending on type
+    type: string
+    recurring_weeks: number
+    capacity?: number
 }) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
@@ -192,26 +193,35 @@ export async function createClassSession(data: {
 
     // Determine target instructor (default to self, but allow override if owner/admin)
     let targetInstructorId = userData.id;
-    if (data.instructor_id && ['owner', 'admin'].includes(userData.role)) {
-        targetInstructorId = data.instructor_id;
+    if (data.instructor_id && data.instructor_id !== userData.id) {
+        // If it looks like a Clerk ID (user_...), we need to find the DB UUID
+        if (data.instructor_id.startsWith('user_')) {
+            const { data: targetUser } = await supabase
+                .from('users')
+                .select('id')
+                .eq('clerk_id', data.instructor_id)
+                .single();
+
+            if (targetUser) {
+                targetInstructorId = targetUser.id;
+            }
+        } else {
+            // It's already a UUID (hopefully)
+            targetInstructorId = data.instructor_id;
+        }
     }
 
-    console.log('🎯 Creating class session:', {
-        organization_id: userData.organization_id,
-        instructor_id: targetInstructorId,
-        data
-    })
-
     const baseStartTime = new Date(data.appointment_date);
-    const defaultCapacity = data.capacity || (data.type === 'private' ? 1 : 3); // Simple default logic
+    const defaultCapacity = data.capacity || (data.type === 'private' ? 1 : 3);
+    const recurringCount = data.recurring_weeks || 1;
 
     const sessionInserts = [];
     const appointmentInserts = [];
 
     // Loop for Weeks (Recurrence)
-    for (let i = 0; i < data.recurring_weeks; i++) {
+    for (let i = 0; i < recurringCount; i++) {
         const currentStartTime = new Date(baseStartTime);
-        currentStartTime.setDate(baseStartTime.getDate() + (i * 7)); // Add 7 days per week
+        currentStartTime.setDate(baseStartTime.getDate() + (i * 7));
 
         const currentEndTime = new Date(currentStartTime.getTime() + data.duration_minutes * 60000);
 
@@ -225,7 +235,7 @@ export async function createClassSession(data: {
                 const dateStr = currentStartTime.toLocaleDateString('tr-TR');
                 return {
                     success: false,
-                    error: `${dateStr} tarihinde işletme kapalıdır (Haftalık Çalışma Saatleri).`
+                    error: `${dateStr} tarihinde işletme kapalıdır.`
                 };
             }
         }
@@ -236,17 +246,11 @@ export async function createClassSession(data: {
             const dateStr = currentStartTime.toLocaleDateString('tr-TR');
             return {
                 success: false,
-                error: data.recurring_weeks > 1
+                error: recurringCount > 1
                     ? `${dateStr} tarihindeki ders için çakışma: ${availability.reason}`
                     : availability.reason
             };
         }
-
-        // 1. Prepare Session Data
-        // We need the ID before inserting appointments, so we might need single inserts or a procedure.
-        // Supabase/Postgres allows `insert().select()` to get IDs back.
-        // But for bulk recursion it's tricky.
-        // Let's do a loop with await for now to ensure we get IDs. It's safer.
 
         const { data: session, error: sessionError } = await supabase
             .from('class_sessions')

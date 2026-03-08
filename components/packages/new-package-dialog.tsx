@@ -59,7 +59,14 @@ export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
 
             if (result.success) {
                 toast.success(`${config.labels.package} oluşturuldu`)
-                form.reset()
+                form.reset({
+                    name: "",
+                    type: "standard",
+                    sessions: "1",
+                    price: "",
+                    duration_days: "365",
+                    duration: "60"
+                })
                 onSuccess()
             } else {
                 toast.error("Hata", { description: result.error })
@@ -75,20 +82,59 @@ export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
+                    {/* LEFT: Treatment Name (Selected from long list) */}
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{config.labels.package || 'Hizmet'} Adı</FormLabel>
+                                {config.labels.customer === 'Hasta' ? (
+                                    <Select
+                                        onValueChange={field.onChange}
+                                        defaultValue={field.value}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="İşlem seçin" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {config.packageTypes?.map(pkg => (
+                                                <SelectItem key={pkg.value} value={pkg.label}>
+                                                    {pkg.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                ) : (
+                                    <FormControl>
+                                        <Input placeholder={`Örn: Kanal Tedavisi`} {...field} />
+                                    </FormControl>
+                                )}
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* RIGHT: Treatment Type (Selected from 3 main categories) */}
                     <FormField
                         control={form.control}
                         name="type"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>{config.labels.package || 'Paket'} Tipi</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormLabel>{config.labels.package || 'Hizmet'} Türü</FormLabel>
+                                <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                >
                                     <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Tip seçin" />
+                                            <SelectValue placeholder="Tür seçin" />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {config.packageTypes?.map(type => (
+                                        {config.appointmentTypes?.map(type => (
                                             <SelectItem key={type.value} value={type.value}>
                                                 {type.label}
                                             </SelectItem>
@@ -102,42 +148,26 @@ export function NewPackageDialog({ onSuccess }: NewPackageDialogProps) {
 
                     <FormField
                         control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                            <FormItem className="col-span-2 md:col-span-1">
-                                <FormLabel>{config.labels.package || 'Tedavi'} Adı</FormLabel>
-                                <FormControl>
-                                    <Input placeholder={`Örn: Standart ${config.labels.package || 'Tedavi'}`} {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    {isPackage && (
-                        <FormField
-                            control={form.control}
-                            name="sessions"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{config.labels.session}</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" placeholder="1" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    )}
-
-                    <FormField
-                        control={form.control}
                         name="duration"
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Süre (Dakika)</FormLabel>
                                 <FormControl>
                                     <Input type="number" placeholder="60" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="sessions"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{config.labels.session}</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="1" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

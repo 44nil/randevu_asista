@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useOrganization } from "@/providers/organization-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -40,6 +40,8 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
     const [filter, setFilter] = useState("all") // all, reformer, mat, duo
     const [editingMember, setEditingMember] = useState<any>(null)
     const [sellingToMember, setSellingToMember] = useState<any>(null)
+    const [currentPage, setCurrentPage] = useState(1)
+    const itemsPerPage = 10
 
     const filteredData = data.filter(member => {
         const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -54,6 +56,20 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
 
         return matchesSearch && matchesFilter
     })
+
+    // Reset to first page when search or filter changes
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [searchTerm, filter])
+
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage)
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage)
+
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`${name} adlı ${config.labels.customer.toLowerCase()}i silmek istediğinizden emin misiniz?`)) return
@@ -112,7 +128,7 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredData.map((member) => (
+                        {paginatedData.map((member) => (
                             <TableRow key={member.id} className="hover:bg-slate-50/50">
                                 <TableCell>
                                     <div className="flex items-center gap-3">
@@ -219,15 +235,51 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
                 </Table>
             </div>
 
-            {/* Pagination Placeholder */}
-            <div className="flex items-center justify-between text-sm text-muted-foreground px-2">
-                <div>Toplam {filteredData.length} {config.labels.customer.toLowerCase()}den 1-10 arası gösteriliyor</div>
-                <div className="flex gap-1">
-                    <Button variant="outline" size="icon" className="h-8 w-8" disabled>{'<'}</Button>
-                    <Button variant="default" size="icon" className="h-8 w-8 bg-blue-600">1</Button>
-                    <Button variant="outline" size="icon" className="h-8 w-8" disabled>{'>'}</Button>
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between text-sm text-muted-foreground px-2 pt-2">
+                    <div>
+                        Toplam <b>{filteredData.length}</b> {config.labels.customer.toLowerCase()}den
+                        {" "}<b>{startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredData.length)}</b> arası gösteriliyor
+                    </div>
+                    <div className="flex gap-1.5 items-center">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg"
+                            disabled={currentPage === 1}
+                            onClick={() => handlePageChange(currentPage - 1)}
+                        >
+                            {'<'}
+                        </Button>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <Button
+                                key={page}
+                                variant={currentPage === page ? "default" : "outline"}
+                                size="icon"
+                                className={cn(
+                                    "h-8 w-8 rounded-lg font-bold",
+                                    currentPage === page ? "bg-blue-600 shadow-cta" : "text-slate-600"
+                                )}
+                                onClick={() => handlePageChange(page)}
+                            >
+                                {page}
+                            </Button>
+                        ))}
+
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg"
+                            disabled={currentPage === totalPages}
+                            onClick={() => handlePageChange(currentPage + 1)}
+                        >
+                            {'>'}
+                        </Button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             <CustomerEditDialog
                 customer={editingMember}

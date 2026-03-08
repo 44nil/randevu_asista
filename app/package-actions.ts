@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { getSession } from "./actions"
+import { supabaseAdmin as supabase } from "@/lib/supabaseAdmin"
 
 // ============================================================================
 // PACKAGE DEFINITIONS
@@ -19,13 +20,6 @@ export async function createPackage(data: {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
-
     // Get org id
     const { data: userData } = await supabase
         .from('users')
@@ -42,11 +36,11 @@ export async function createPackage(data: {
         .insert({
             organization_id: userData.organization_id,
             name: data.name,
-            type: data.type || 'group',
+            type: data.type || 'standard',
             description: data.description,
             price: data.price,
             credits: data.credits,
-            sessions: data.credits, // Fix: Adding required 'sessions' column mapping
+            sessions: data.credits,
             validity_days: data.validity_days,
             duration_minutes: data.duration || 60
         })
@@ -58,20 +52,14 @@ export async function createPackage(data: {
         return { success: false, error: error.message };
     }
 
+    revalidatePath('/packages');
     revalidatePath('/admin/packages');
     return { success: true, data: pkg };
 }
 
 export async function getPackages() {
     const { userId } = await getSession();
-    if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
+    if (!userId) return { success: false, data: [] };
 
     const { data: userData } = await supabase
         .from('users')
@@ -102,13 +90,6 @@ export async function getPackages() {
 export async function sellPackage(customerId: string, packageId: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
 
     // Get package details
     const { data: pkg, error: pkgError } = await supabase
@@ -155,13 +136,6 @@ export async function getCustomerActivePackages(customerId: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
-
     const { data, error } = await supabase
         .from('customer_packages')
         .select('*')
@@ -181,13 +155,6 @@ export async function getCustomerActivePackages(customerId: string) {
 export async function getPackagePageStats() {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
 
     const { data: userData } = await supabase
         .from('users')
@@ -256,13 +223,6 @@ export async function getRecentSales() {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
-
     const { data: userData } = await supabase
         .from('users')
         .select('organization_id')
@@ -305,13 +265,6 @@ export async function getRecentSales() {
 export async function deletePackage(packageId: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
 
     const { data: userData } = await supabase
         .from('users')

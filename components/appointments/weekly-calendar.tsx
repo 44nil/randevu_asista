@@ -56,7 +56,7 @@ export function WeeklyCalendar() {
     const [appointments, setAppointments] = useState<Appointment[]>([])
     const [loading, setLoading] = useState(true)
     const [detailOpen, setDetailOpen] = useState(false)
-    const [selectedSlot, setSelectedSlot] = useState<any>(null)
+    const [selectedSlot, setSelectedSlot] = useState<Appointment | null>(null)
     const [stats, setStats] = useState({
         totalMembers: 0,
         completedClasses: 0,
@@ -65,6 +65,11 @@ export function WeeklyCalendar() {
     })
     const [staffList, setStaffList] = useState<any[]>([])
     const [selectedStaffId, setSelectedStaffId] = useState<string>("all")
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
     const weekEnd = addDays(weekStart, 6)
@@ -168,14 +173,14 @@ export function WeeklyCalendar() {
         )
     }
 
-    const categoryColors = {
-        reformer: { bg: 'rgba(37, 99, 235, 0.08)', border: '#2563EB', text: '#2563EB' }, // Electric
-        mat: { bg: 'rgba(56, 189, 248, 0.08)', border: '#38BDF8', text: '#38BDF8' }, // Accent
-        private: { bg: 'rgba(16, 185, 129, 0.08)', border: '#10B981', text: '#10B981' } // Green
+    const categoryColors: Record<ClassType, { bg: string, border: string, text: string }> = {
+        reformer: { bg: 'rgba(46, 102, 241, 0.08)', border: '#2E66F1', text: '#2E66F1' }, // Muayene Blue
+        mat: { bg: 'rgba(62, 185, 241, 0.08)', border: '#3EB9F1', text: '#3EB9F1' },    // Tedavi Light Blue
+        private: { bg: 'rgba(16, 185, 129, 0.08)', border: '#10B981', text: '#10B981' } // Özel Green
     }
 
     return (
-        <div className="space-y-8 font-sans">
+        <div className="space-y-8 font-sans relative z-10">
             {/* Header Toolbar */}
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-7 rounded-card border-none shadow-brand">
                 <div>
@@ -212,32 +217,49 @@ export function WeeklyCalendar() {
                     <Button variant="outline" size="sm" onClick={goToToday} className="h-9 px-4 text-xs font-bold text-navy border-border-brand border-[1.5px] rounded-btn hover:bg-bg transition-all">
                         Bugün
                     </Button>
+
                     <Dialog>
                         <DialogTrigger asChild>
                             <Button className="h-9 px-4 bg-electric text-white rounded-btn font-bold text-xs gap-2 shadow-cta hover:bg-navy transition-all">
                                 <Plus className="h-4 w-4" /> Yeni
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 border-none rounded-card">
-                            <AppointmentForm staffId={session?.user?.id} onSuccess={() => setWeekStart(startOfWeek(weekStart, { weekStartsOn: 1 }))} />
+                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 border-none">
+                            <DialogHeader className="sr-only">
+                                <DialogTitle>Yeni {config.labels.appointment}</DialogTitle>
+                            </DialogHeader>
+                            <AppointmentForm
+                                staffId={session?.user?.id}
+                                onSuccess={() => {
+                                    window.location.reload()
+                                }}
+                            />
                         </DialogContent>
                     </Dialog>
                 </div>
             </div>
 
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-8 flex-wrap bg-white/60 backdrop-blur-sm p-3.5 rounded-card px-8 border border-border-brand/30 shadow-brand">
-                    <div className="flex items-center gap-2.5">
-                        <div className="size-3 rounded-full bg-electric"></div>
-                        <span className="text-[11px] font-bold text-t2 uppercase tracking-wider">{config.labels.customer === 'Hasta' ? 'Muayene' : 'Reformer'}</span>
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                        <div className="size-3 rounded-full bg-accent"></div>
-                        <span className="text-[11px] font-bold text-t2 uppercase tracking-wider">{config.labels.customer === 'Hasta' ? 'Tedavi' : 'Mat Pilates'}</span>
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                        <div className="size-3 rounded-full bg-green"></div>
-                        <span className="text-[11px] font-bold text-t2 uppercase tracking-wider">{config.labels.customer === 'Hasta' ? 'Özel / Estetik' : `Özel ${config.labels.appointment}`}</span>
+                <div className="flex items-center justify-center">
+                    <div className="flex items-center gap-12 flex-wrap bg-white p-5 rounded-[24px] px-12 border border-border-brand/10 shadow-sm max-w-fit transition-all hover:shadow-brand">
+                        <div className="flex items-center gap-4">
+                            <div className="size-5 rounded-full" style={{ backgroundColor: categoryColors.reformer.border }}></div>
+                            <span className="text-[13px] font-bold text-slate-700 uppercase tracking-widest leading-none">
+                                {config.labels.customer === 'Hasta' ? 'MUAYENE' : 'REFORMER'}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="size-5 rounded-full" style={{ backgroundColor: categoryColors.mat.border }}></div>
+                            <span className="text-[13px] font-bold text-slate-700 uppercase tracking-widest leading-none">
+                                {config.labels.customer === 'Hasta' ? 'TEDAVİ' : 'MAT PİLATES'}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="size-5 rounded-full" style={{ backgroundColor: categoryColors.private.border }}></div>
+                            <span className="text-[13px] font-bold text-slate-700 uppercase tracking-widest leading-none">
+                                {config.labels.customer === 'Hasta' ? 'ÖZEL / ESTETİK' : `ÖZEL ${config.labels.appointment.toUpperCase()}`}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -338,6 +360,7 @@ export function WeeklyCalendar() {
                 </div>
             </div>
 
+
             {/* Stats/Summary Footer */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="bg-white p-7 rounded-card border-none shadow-brand flex items-center gap-6 transition-all hover:shadow-elevated">
@@ -372,6 +395,105 @@ export function WeeklyCalendar() {
                     </div>
                 </div>
             </div>
+
+            {/* Appointment Detail Dialog */}
+            <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+                <DialogContent className="max-w-md p-0 overflow-hidden border-none text-navy">
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>Randevu Detayı</DialogTitle>
+                    </DialogHeader>
+                    {selectedSlot && (
+                        <div className="relative">
+                            {/* Color Header */}
+                            <div className="h-2 w-full" style={{ backgroundColor: categoryColors[selectedSlot.type]?.border || categoryColors.reformer.border }}></div>
+
+                            <div className="p-8 space-y-8 bg-white overflow-visible relative">
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 border-border-brand/30 text-t3">
+                                            {selectedSlot.id.substring(0, 8)}
+                                        </Badge>
+                                        {config.features.classes && (
+                                            <Badge className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1"
+                                                style={{
+                                                    backgroundColor: categoryColors[selectedSlot.type]?.bg || categoryColors.reformer.bg,
+                                                    color: categoryColors[selectedSlot.type]?.border || categoryColors.reformer.border
+                                                }}>
+                                                {selectedSlot.type === 'private' ? 'ÖZEL' : 'GRUP'} {config.labels.appointment}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    <h3 className="text-2xl font-extrabold text-navy uppercase tracking-tight leading-tight">
+                                        {selectedSlot.title}
+                                    </h3>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-bg/50 p-4 rounded-[14px] border border-border-brand/10">
+                                        <p className="text-[9px] font-black text-t3 uppercase tracking-widest mb-1">TARİH</p>
+                                        <p className="text-xs font-bold text-navy">{format(selectedSlot.startTime, 'd MMMM EEEE', { locale: tr })}</p>
+                                    </div>
+                                    <div className="bg-bg/50 p-4 rounded-[14px] border border-border-brand/10">
+                                        <p className="text-[9px] font-black text-t3 uppercase tracking-widest mb-1">SAAT</p>
+                                        <p className="text-xs font-bold text-navy">
+                                            {format(selectedSlot.startTime, 'HH:mm')} - {format(new Date(selectedSlot.startTime.getTime() + selectedSlot.duration * 60000), 'HH:mm')}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-4 bg-bg/30 p-4 rounded-[14px] border border-border-brand/10">
+                                    <div className="h-10 w-10 rounded-full bg-white shadow-brand flex items-center justify-center font-black text-electric">
+                                        {selectedSlot.instructor?.charAt(0)}
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <p className="text-[9px] font-black text-t3 uppercase tracking-widest mb-0.5">{config.labels.instructor}</p>
+                                        <p className="text-sm font-extrabold text-navy">{selectedSlot.instructor}</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[10px] font-black text-t3 uppercase tracking-widest flex items-center gap-2">
+                                            <Users className="h-4 w-4" />
+                                            KATILIMCI LİSTESİ ({selectedSlot.participants.length}/{selectedSlot.maxAttendees})
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin">
+                                        {selectedSlot.participants.length > 0 ? selectedSlot.participants.map((name: string, i: number) => (
+                                            <div key={i} className="flex items-center justify-between bg-white p-3.5 rounded-[12px] border border-border-brand/10 shadow-sm transition-all hover:bg-bg/30">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-7 w-7 rounded-full bg-bg flex items-center justify-center text-[10px] font-bold text-navy/60">
+                                                        {name.charAt(0)}
+                                                    </div>
+                                                    <span className="text-xs font-bold text-navy italic">{name}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 bg-green-50 text-green px-2 py-0.5 rounded-full text-[9px] font-black">
+                                                    <CheckCircle className="h-3 w-3" />
+                                                    ONAYLANDI
+                                                </div>
+                                            </div>
+                                        )) : (
+                                            <div className="py-6 text-center text-t3 text-xs italic font-medium bg-bg/20 rounded-[14px] border-2 border-dashed border-border-brand/10">
+                                                Henüz katılımcı bulunmuyor.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 pt-2">
+                                    <Button variant="outline" className="flex-1 h-11 text-xs font-black uppercase tracking-widest border-border-brand/30 text-t2 rounded-btn hover:bg-bg" onClick={() => setDetailOpen(false)}>
+                                        Kapat
+                                    </Button>
+                                    <Button className="flex-1 h-11 text-xs font-black uppercase tracking-widest bg-navy text-white rounded-btn shadow-cta hover:bg-electric transition-all">
+                                        Düzenle
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
