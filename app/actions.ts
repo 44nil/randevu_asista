@@ -36,7 +36,6 @@ export const getUserProfile = cache(async () => {
                 .single();
 
             if (pendingProfile) {
-                console.log(`Linking pending account ${pendingProfile.id} for email ${userEmail} to Clerk ID ${userId}`);
 
                 // Link the pending account to the real Clerk ID
                 const { data: updatedProfile, error } = await supabase
@@ -55,7 +54,6 @@ export const getUserProfile = cache(async () => {
                 }
             } else {
                 // FALLBACK: User doesn't exist at all, and webhook might have failed/been skipped locally
-                console.log(`Creating fallback user for ${userEmail} because webhook was missed`);
                 const fullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || userEmail.split('@')[0];
                 const { data: newUser, error: createError } = await supabase
                     .from('users')
@@ -295,31 +293,6 @@ export async function deleteCustomer(id: string) {
         console.error(error);
         return { success: false, error: error.message };
     }
-
-    revalidatePath('/');
-    return { success: true };
-}
-
-export async function fixUserConnection() {
-    const { userId } = await getSession();
-    if (!userId) return { success: false, error: "No user" };
-
-    const supabase = supabaseAdmin;
-
-    // Hardcode the target for this specific recovery case
-    const targetSubdomain = 'elif-pilates';
-
-    // 1. Find Org
-    const { data: org } = await supabase.from('organizations').select('id').eq('subdomain', targetSubdomain).single();
-    if (!org) return { success: false, error: "Organizasyon bulunamadı (elif-pilates)" };
-
-    // 2. Link User
-    const { error } = await supabase.from('users').update({
-        organization_id: org.id,
-        role: 'owner'
-    }).eq('clerk_id', userId);
-
-    if (error) return { success: false, error: error.message };
 
     revalidatePath('/');
     return { success: true };

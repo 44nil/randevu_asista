@@ -100,8 +100,6 @@ export async function getCustomerDashboardData() {
     ]);
 
     const activePackage = activePackageRes.data;
-    console.log("DEBUG: Customer ID:", customerRecord.id);
-    console.log("DEBUG: Active Package Query Result:", activePackageRes);
     const upcomingClasses = upcomingClassesRes.data || [];
 
     return {

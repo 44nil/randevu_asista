@@ -7,11 +7,9 @@ import { revalidatePath } from "next/cache";
 
 export async function createOrganization(prevState: any, formData: FormData) {
     try {
-        console.log("--- Onboarding Başladı ---");
         const { userId } = await auth();
         const user = await currentUser();
 
-        console.log("User Auth:", { userId, email: user?.emailAddresses[0]?.emailAddress });
 
         if (!userId || !user) {
             return { error: "Oturum açmanız gerekiyor (Auth Hatası)." };
@@ -40,7 +38,6 @@ export async function createOrganization(prevState: any, formData: FormData) {
         }
 
         if (!dbUser) {
-            console.log("Kullanıcı DB'de yok, oluşturuluyor...");
             const email = user.emailAddresses[0]?.emailAddress;
             const { data: newUser, error: createError } = await supabase
                 .from("users")
@@ -93,7 +90,6 @@ export async function createOrganization(prevState: any, formData: FormData) {
             console.error("Org Create Error:", orgError);
             return { error: "Organizasyon oluşturulamadı: " + orgError.message };
         }
-        console.log("Org Oluşturuldu:", org.id);
 
         // 4. Kullanıcı Güncelleme
         const { error: updateError } = await supabase
@@ -107,7 +103,6 @@ export async function createOrganization(prevState: any, formData: FormData) {
         }
 
         // 5. Servisler
-        console.log("Servisler ekleniyor...");
         const defaultServices: Record<string, any[]> = {
             'pilates': [
                 { name: 'Reformer Pilates (Birebir)', duration_minutes: 60, price: 750, color: '#fda4af', category: 'Ders' },
@@ -145,7 +140,6 @@ export async function createOrganization(prevState: any, formData: FormData) {
             if (serviceError) console.error("Service Error:", serviceError);
         }
 
-        console.log("--- Onboarding Başarılı ---");
         return { success: true };
 
     } catch (err: any) {

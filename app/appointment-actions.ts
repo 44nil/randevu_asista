@@ -280,7 +280,6 @@ export async function createClassSession(data: {
             };
         }
 
-        console.log('✅ Session created:', session);
 
         // 2. Prepare Appointments (if customers provided)
         if (data.customer_ids && data.customer_ids.length > 0) {
