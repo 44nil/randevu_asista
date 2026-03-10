@@ -4,6 +4,7 @@ import { createSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { INDUSTRY_DB_ALIAS } from "@/lib/config/industries";
 
 export async function createOrganization(prevState: any, formData: FormData) {
     try {
@@ -64,14 +65,8 @@ export async function createOrganization(prevState: any, formData: FormData) {
             .replace(/-+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
         // DB sadece 4 tipi kabul ediyor: 'pilates' | 'hair' | 'dental' | 'general'
-        // Diğer sektörler alias ile eşlenir (real_industry settings'e kaydedilir)
-        const INDUSTRY_ALIAS: Record<string, string> = {
-            pilates: 'pilates', yoga: 'pilates', pt: 'pilates',
-            dental: 'dental', physio: 'dental', dietitian: 'dental', psychologist: 'dental',
-            hair: 'hair', beauty: 'hair',
-            general: 'general', other: 'general',
-        };
-        const dbIndustryType = INDUSTRY_ALIAS[industryType] || 'general';
+        // Gerçek sektör settings.real_industry'e kaydedilir, config'de kullanılır
+        const dbIndustryType = INDUSTRY_DB_ALIAS[industryType] || 'general';
 
         // 3. Organizasyonu oluştur
         const { data: org, error: orgError } = await supabase

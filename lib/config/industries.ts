@@ -194,8 +194,158 @@ export const INDUSTRY_CONFIG: Record<IndustryType, IndustryConfig> = {
     }
 };
 
-// Onboarding'de seçilen sektörleri mevcut DB config'lerine eşler
-const INDUSTRY_ALIAS: Record<string, IndustryType> = {
+// Onboarding'de seçilen sektörlere özel genişletilmiş config'ler
+// (DB'de 4 tip var ama UI'da her sektör kendi randevu/paket tiplerini gösterir)
+const INDUSTRY_EXTENDED_CONFIG: Partial<Record<string, IndustryConfig>> = {
+    yoga: {
+        labels: {
+            appointment: "Ders",
+            createAppointment: "Ders Ekle",
+            customer: "Üye",
+            createCustomer: "Yeni Üye",
+            program: "Haftalık Program",
+            package: "Paket",
+            session: "Seans",
+            instructor: "Eğitmen"
+        },
+        appointmentTypes: [
+            { value: 'group_yoga', label: 'Grup Yoga' },
+            { value: 'private_yoga', label: 'Özel Yoga' },
+            { value: 'meditation', label: 'Meditasyon' },
+            { value: 'yin_yoga', label: 'Yin Yoga' },
+        ],
+        packageTypes: [
+            { value: 'group', label: 'Grup Ders Paketi' },
+            { value: 'private', label: 'Özel Ders' },
+            { value: 'monthly', label: 'Aylık Üyelik' },
+        ],
+        features: { measurements: false, classes: true, packages: true, recurring: true }
+    },
+    pt: {
+        labels: {
+            appointment: "Antrenman",
+            createAppointment: "Antrenman Ekle",
+            customer: "Danışan",
+            createCustomer: "Yeni Danışan",
+            program: "Antrenman Programı",
+            package: "Paket",
+            session: "Seans",
+            instructor: "Antrenör"
+        },
+        appointmentTypes: [
+            { value: 'pt_session', label: 'PT Seansı' },
+            { value: 'group_training', label: 'Grup Antrenmanı' },
+            { value: 'online_coaching', label: 'Online Koçluk' },
+            { value: 'assessment', label: 'Değerlendirme' },
+        ],
+        packageTypes: [
+            { value: 'individual_pt', label: 'Bireysel PT' },
+            { value: 'group_pt', label: 'Grup Antrenmanı' },
+            { value: 'online_coaching', label: 'Online Koçluk' },
+        ],
+        features: { measurements: true, classes: false, packages: true, recurring: true }
+    },
+    physio: {
+        labels: {
+            appointment: "Seans",
+            createAppointment: "Seans Ekle",
+            customer: "Hasta",
+            createCustomer: "Yeni Hasta",
+            program: "Tedavi Planı",
+            package: "Tedavi",
+            session: "Seans",
+            instructor: "Fizyoterapist"
+        },
+        appointmentTypes: [
+            { value: 'physio_session', label: 'Fizyoterapi Seansı' },
+            { value: 'manual_therapy', label: 'Manuel Terapi' },
+            { value: 'assessment', label: 'Değerlendirme' },
+            { value: 'dry_needling', label: 'Dry Needling' },
+        ],
+        packageTypes: [
+            { value: 'physio_session', label: 'Fizyoterapi Seansı' },
+            { value: 'posture_analysis', label: 'Duruş Analizi' },
+            { value: 'treatment_package', label: 'Tedavi Paketi' },
+        ],
+        features: { measurements: false, classes: false, packages: true, recurring: false }
+    },
+    dietitian: {
+        labels: {
+            appointment: "Randevu",
+            createAppointment: "Randevu Ekle",
+            customer: "Danışan",
+            createCustomer: "Yeni Danışan",
+            program: "Diyet Programı",
+            package: "Program",
+            session: "Seans",
+            instructor: "Diyetisyen"
+        },
+        appointmentTypes: [
+            { value: 'first_visit', label: 'İlk Muayene' },
+            { value: 'checkup', label: 'Kontrol' },
+            { value: 'online', label: 'Online Danışmanlık' },
+        ],
+        packageTypes: [
+            { value: 'first_visit', label: 'İlk Muayene' },
+            { value: 'monthly_program', label: 'Aylık Program' },
+            { value: 'online_program', label: 'Online Danışmanlık' },
+        ],
+        features: { measurements: true, classes: false, packages: true, recurring: false }
+    },
+    psychologist: {
+        labels: {
+            appointment: "Seans",
+            createAppointment: "Seans Ekle",
+            customer: "Danışan",
+            createCustomer: "Yeni Danışan",
+            program: "Terapi Planı",
+            package: "Seans Paketi",
+            session: "Seans",
+            instructor: "Psikolog"
+        },
+        appointmentTypes: [
+            { value: 'individual_therapy', label: 'Bireysel Terapi' },
+            { value: 'couples_therapy', label: 'Çift Terapisi' },
+            { value: 'first_session', label: 'İlk Görüşme' },
+            { value: 'online_therapy', label: 'Online Terapi' },
+        ],
+        packageTypes: [
+            { value: 'individual', label: 'Bireysel Seans' },
+            { value: 'couples', label: 'Çift Seansı' },
+            { value: 'package_5', label: '5\'li Seans Paketi' },
+        ],
+        features: { measurements: false, classes: false, packages: true, recurring: false }
+    },
+    beauty: {
+        labels: {
+            appointment: "Randevu",
+            createAppointment: "Randevu Ekle",
+            customer: "Müşteri",
+            createCustomer: "Yeni Müşteri",
+            program: "Randevu Takvimi",
+            package: "Bakım Paketi",
+            session: "Seans",
+            instructor: "Uzman"
+        },
+        appointmentTypes: [
+            { value: 'skincare', label: 'Cilt Bakımı' },
+            { value: 'laser', label: 'Lazer Epilasyon' },
+            { value: 'manicure', label: 'Manikür' },
+            { value: 'pedicure', label: 'Pedikür' },
+            { value: 'eyebrow', label: 'Kaş & Kirpik' },
+            { value: 'massage', label: 'Masaj' },
+        ],
+        packageTypes: [
+            { value: 'skincare_package', label: 'Cilt Bakım Paketi' },
+            { value: 'laser_package', label: 'Lazer Paketi' },
+            { value: 'nail_package', label: 'Tırnak Bakım Paketi' },
+        ],
+        features: { measurements: false, classes: false, packages: true, recurring: false }
+    },
+};
+
+// Onboarding'de seçilen sektörleri DB'deki kısıtlı tiplere eşler (sadece DB yazımı için)
+export const INDUSTRY_DB_ALIAS: Record<string, IndustryType> = {
     pilates: 'pilates',
     yoga: 'pilates',
     pt: 'pilates',
@@ -210,6 +360,10 @@ const INDUSTRY_ALIAS: Record<string, IndustryType> = {
 };
 
 export function getIndustryConfig(type?: string): IndustryConfig {
-    const mapped = INDUSTRY_ALIAS[type || ''] || 'general';
+    const key = type || 'general';
+    // 1. Önce extended config'e bak (yoga, pt, physio, beauty, vs.)
+    if (INDUSTRY_EXTENDED_CONFIG[key]) return INDUSTRY_EXTENDED_CONFIG[key]!;
+    // 2. Yoksa DB tip config'ini kullan (pilates, hair, dental, general)
+    const mapped = INDUSTRY_DB_ALIAS[key] || 'general';
     return INDUSTRY_CONFIG[mapped];
 }

@@ -38,7 +38,11 @@ interface OrganizationProviderProps {
 }
 
 export function OrganizationProvider({ children, organization, user }: OrganizationProviderProps) {
-    const config = getIndustryConfig(organization?.industry_type)
+    // real_industry: onboarding'de seçilen asıl sektör (yoga, pt, physio, vs.)
+    // industry_type: DB'deki kısıtlı tip (pilates, hair, dental, general)
+    // Config için her zaman real_industry'i tercih et
+    const realIndustry = organization?.settings?.real_industry || organization?.industry_type
+    const config = getIndustryConfig(realIndustry)
 
     return (
         <OrganizationContext.Provider value={{
