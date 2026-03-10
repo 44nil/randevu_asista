@@ -14,7 +14,7 @@ import { toast } from "sonner"
 import { useEffect, useState, useMemo } from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon, X, Check, Search, UserPlus, Trash2, AlertTriangle } from "lucide-react"
+import { CalendarIcon, X, Check, Search, UserPlus, Trash2, AlertTriangle, Repeat, Users } from "lucide-react"
 import { format } from "date-fns"
 import { tr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -463,6 +463,89 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
                         )}
                     />
                 </div>
+
+                {/* Kapasite — sadece grup ders sektörlerinde */}
+                {config.features.classes && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField
+                            control={form.control}
+                            name="max_attendees"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-xs font-black text-navy uppercase tracking-widest flex items-center gap-2">
+                                        <Users className="h-3.5 w-3.5" />
+                                        Maksimum Kapasite
+                                    </FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger className="h-12 rounded-input border-[1.5px] border-border-brand bg-white font-bold text-navy hover:bg-bg transition-all px-4 shadow-sm">
+                                                <SelectValue placeholder="Seçiniz" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent className="bg-white border-border-brand/30 shadow-elevated">
+                                            {[1,2,3,4,5,6,8,10,12,15,20].map(n => (
+                                                <SelectItem key={n} value={String(n)} className="font-medium">{n} Kişi</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                )}
+
+                {/* Tekrarlı randevu — sadece recurring=true sektörlerinde */}
+                {config.features.recurring && (
+                    <div className="space-y-4 bg-slate-50 rounded-xl border border-slate-200 p-4">
+                        <FormField
+                            control={form.control}
+                            name="is_recurring"
+                            render={({ field }) => (
+                                <FormItem className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Repeat className="h-4 w-4 text-slate-500" />
+                                        <FormLabel className="text-sm font-bold text-navy cursor-pointer mb-0">
+                                            Tekrarlı {config.labels.appointment}
+                                        </FormLabel>
+                                    </div>
+                                    <FormControl>
+                                        <Switch
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
+
+                        {form.watch("is_recurring") && (
+                            <FormField
+                                control={form.control}
+                                name="recurring_weeks"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs font-black text-navy uppercase tracking-widest">Kaç Hafta Tekrarlasın?</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger className="h-12 rounded-input border-[1.5px] border-border-brand bg-white font-bold text-navy hover:bg-bg transition-all px-4 shadow-sm">
+                                                    <SelectValue placeholder="Seçiniz" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent className="bg-white border-border-brand/30 shadow-elevated">
+                                                <SelectItem value="2" className="font-medium">2 Hafta</SelectItem>
+                                                <SelectItem value="4" className="font-medium">4 Hafta (1 Ay)</SelectItem>
+                                                <SelectItem value="8" className="font-medium">8 Hafta (2 Ay)</SelectItem>
+                                                <SelectItem value="12" className="font-medium">12 Hafta (3 Ay)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+                    </div>
+                )}
 
                 {formError && (
                     <div className="bg-red-50 border-[1.5px] border-red-200 p-4 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
