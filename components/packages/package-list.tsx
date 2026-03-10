@@ -27,6 +27,10 @@ interface PackageListProps {
 
 export function PackageList({ data, onRefresh }: PackageListProps) {
     const { config } = useOrganization()
+    const PAGE_SIZE = 8
+    const [page, setPage] = useState(0)
+    const totalPages = Math.ceil(data.length / PAGE_SIZE)
+    const pagedData = data.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`${name} ${config.labels.package.toLowerCase()}ini silmek istediğinizden emin misiniz?`)) return
         const res = await deletePackage(id)
@@ -105,7 +109,7 @@ export function PackageList({ data, onRefresh }: PackageListProps) {
                             </TableCell>
                         </TableRow>
                     ) : (
-                        data.map((pkg, index) => {
+                        pagedData.map((pkg, index) => {
                             const isDuplicate = data.some((item, i) =>
                                 i !== index &&
                                 item.name === pkg.name &&
@@ -157,6 +161,39 @@ export function PackageList({ data, onRefresh }: PackageListProps) {
                     )}
                 </TableBody>
             </Table>
+
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-4 border-t">
+                    <p className="text-xs text-slate-500 font-medium">
+                        Toplam {data.length} kayıt — Sayfa {page + 1} / {totalPages}
+                    </p>
+                    <div className="flex items-center gap-1">
+                        <button
+                            type="button"
+                            onClick={() => setPage(p => Math.max(0, p - 1))}
+                            disabled={page === 0}
+                            className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 text-sm font-bold flex items-center justify-center transition-colors"
+                        >&lt;</button>
+                        {Array.from({ length: totalPages }, (_, i) => (
+                            <button
+                                key={i}
+                                type="button"
+                                onClick={() => setPage(i)}
+                                className={cn(
+                                    "w-8 h-8 rounded-lg text-sm font-bold flex items-center justify-center transition-colors",
+                                    page === i ? "bg-blue-600 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                                )}
+                            >{i + 1}</button>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                            disabled={page === totalPages - 1}
+                            className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 text-sm font-bold flex items-center justify-center transition-colors"
+                        >&gt;</button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
