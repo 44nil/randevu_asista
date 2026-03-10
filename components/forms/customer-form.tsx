@@ -259,7 +259,7 @@ export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }:
                     </div>
                 )}
 
-                <Button type="submit">Kaydet</Button>
+                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-11 rounded-lg">Kaydet</Button>
             </form>
         </Form>
     )

@@ -56,6 +56,7 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
     const [loading, setLoading] = useState(false)
     const [mounted, setMounted] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")
+    const [customerPage, setCustomerPage] = useState(0)
     const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false)
     const [isPickerOpen, setIsPickerOpen] = useState(false)
     const [formError, setFormError] = useState<string | null>(null)
@@ -129,13 +130,22 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
         setAvailableTimes(times)
     }, [appointmentDate])
 
+    const PAGE_SIZE = 5
+
     const filteredCustomers = useMemo(() => {
-        if (!searchTerm) return customers.slice(0, 10)
+        if (!searchTerm) return customers
         return customers.filter(c =>
             c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             c.phone?.includes(searchTerm)
-        ).slice(0, 10)
+        )
     }, [customers, searchTerm])
+
+    useEffect(() => {
+        setCustomerPage(0)
+    }, [searchTerm])
+
+    const totalPages = Math.ceil(filteredCustomers.length / PAGE_SIZE)
+    const pagedCustomers = filteredCustomers.slice(customerPage * PAGE_SIZE, (customerPage + 1) * PAGE_SIZE)
 
     const selectedCustomerIds = form.watch("customer_ids") || []
 
@@ -157,9 +167,10 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
         setFormError(null)
         try {
             const dateStr = format(values.appointment_date, 'yyyy-MM-dd')
-            const startTimeStr = `${dateStr}T${values.time}:00.000Z`
-
-            const start = new Date(startTimeStr)
+            // Yerel saat olarak işle — UTC'ye çevirme (timezone offset ekle)
+            const [hours, minutes] = values.time.split(':').map(Number)
+            const start = new Date(values.appointment_date)
+            start.setHours(hours, minutes, 0, 0)
             const end = new Date(start.getTime() + parseInt(values.duration) * 60000)
 
             const res = await createClassSession({
@@ -272,6 +283,7 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
                         <Popover open={isPickerOpen} onOpenChange={setIsPickerOpen}>
                             <PopoverTrigger asChild>
                                 <Button
+                                    type="button"
                                     variant="outline"
                                     role="combobox"
                                     aria-expanded={isPickerOpen}
@@ -285,7 +297,7 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
                                     <Search className="ml-2 h-4 w-4 shrink-0 opacity-50 text-electric" />
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-[340px] p-0 bg-white border border-border-brand/40 shadow-elevated z-[100]" align="start">
+                            <PopoverContent className="w-[340px] p-0 bg-white border border-border-brand/40 shadow-elevated z-[200]" align="start" side="bottom" sideOffset={4} avoidCollisions={false}>
                                 <div className="flex flex-col p-3 space-y-3 bg-white">
                                     <div className="flex items-center border rounded-md px-3 bg-slate-50">
                                         <Search className="h-4 w-4 mr-2 opacity-50" />
@@ -297,9 +309,9 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
                                         />
                                     </div>
 
-                                    <div className="max-h-[220px] overflow-y-auto space-y-1">
-                                        {filteredCustomers.length > 0 ? (
-                                            filteredCustomers.map((c) => (
+                                    <div className="space-y-1">
+                                        {pagedCustomers.length > 0 ? (
+                                            pagedCustomers.map((c) => (
                                                 <div
                                                     key={c.id}
                                                     className={cn(
@@ -322,31 +334,37 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
                                         )}
                                     </div>
 
+                                    {totalPages > 1 && (
+                                        <div className="flex items-center justify-center gap-1 pt-2">
+                                            <button type="button" onClick={() => setCustomerPage(p => Math.max(0, p - 1))} disabled={customerPage === 0} className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 text-sm font-bold flex items-center justify-center transition-colors">&lt;</button>
+                                            {Array.from({ length: totalPages }, (_, i) => (
+                                                <button key={i} type="button" onClick={() => setCustomerPage(i)} className={cn("w-8 h-8 rounded-lg text-sm font-bold flex items-center justify-center transition-colors", customerPage === i ? "bg-blue-600 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-600")}>{i + 1}</button>
+                                            ))}
+                                            <button type="button" onClick={() => setCustomerPage(p => Math.min(totalPages - 1, p + 1))} disabled={customerPage === totalPages - 1} className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 text-sm font-bold flex items-center justify-center transition-colors">&gt;</button>
+                                        </div>
+                                    )}
+
                                     <div className="pt-2 border-t">
-                                        <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
-                                            <DialogTrigger asChild>
-                                                <Button variant="ghost" className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold h-10 text-xs">
-                                                    <UserPlus className="mr-2 h-4 w-4" />
-                                                    YENİ {config.labels.customer.toUpperCase()} EKLE
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="max-w-md bg-white">
-                                                <DialogHeader>
-                                                    <DialogTitle>Yeni {config.labels.customer} Kaydı</DialogTitle>
-                                                </DialogHeader>
-                                                <CustomerForm
-                                                    industryType={(organization?.industry_type as any) || "general"}
-                                                    onSuccess={() => {
-                                                        loadCustomers()
-                                                        setIsCustomerDialogOpen(false)
-                                                    }}
-                                                />
-                                            </DialogContent>
-                                        </Dialog>
+                                        <Button type="button" variant="ghost" className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold h-10 text-xs" onClick={() => { setIsPickerOpen(false); setIsCustomerDialogOpen(true) }}>
+                                            <UserPlus className="mr-2 h-4 w-4" />
+                                            YENİ {config.labels.customer.toUpperCase()} EKLE
+                                        </Button>
                                     </div>
                                 </div>
                             </PopoverContent>
                         </Popover>
+
+                        <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
+                            <DialogContent className="max-w-md bg-white">
+                                <DialogHeader>
+                                    <DialogTitle>Yeni {config.labels.customer} Kaydı</DialogTitle>
+                                </DialogHeader>
+                                <CustomerForm
+                                    industryType={(organization?.industry_type as any) || "general"}
+                                    onSuccess={() => { loadCustomers(); setIsCustomerDialogOpen(false) }}
+                                />
+                            </DialogContent>
+                        </Dialog>
 
                         <div className="flex flex-wrap gap-2 mt-2">
                             {selectedCustomerIds.map((id: string) => {
@@ -382,6 +400,7 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
                                     <PopoverTrigger asChild>
                                         <FormControl>
                                             <Button
+                                                type="button"
                                                 variant="outline"
                                                 className={cn(
                                                     "w-full pl-4 text-left font-bold h-12 rounded-input border-[1.5px] border-border-brand bg-white text-navy hover:bg-bg transition-all shadow-sm",
@@ -397,7 +416,7 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
                                             </Button>
                                         </FormControl>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0 bg-white border-border-brand/30 shadow-elevated z-[110]" align="start">
+                                    <PopoverContent className="w-auto p-0 bg-white border-border-brand/30 shadow-elevated z-[200]" align="start" side="bottom" avoidCollisions={false}>
                                         <Calendar
                                             mode="single"
                                             selected={field.value}
