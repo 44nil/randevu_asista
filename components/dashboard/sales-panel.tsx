@@ -40,15 +40,15 @@ export function SalesPanel({ data }: SalesPanelProps) {
                                 <div className="flex-1">
                                     <div className="flex justify-between items-start">
                                         <p className="text-sm font-bold text-navy">
-                                            {item.package?.name || "Bilinmeyen Paket"}
+                                            {item.package_name || "Bilinmeyen Paket"}
                                         </p>
                                         <span className="text-xs text-slate-400">
-                                            {formatDistanceToNow(new Date(item.sale_date), { addSuffix: true, locale: tr })}
+                                            {formatDistanceToNow(new Date(item.created_at), { addSuffix: true, locale: tr })}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center mt-1">
                                         <p className="text-xs text-slate-500">{item.customer?.name || "Müşteri"}</p>
-                                        <span className="text-xs font-medium text-slate-600">• {formatCurrency(item.amount)}</span>
+                                        <span className="text-xs font-medium text-slate-600">• {formatCurrency(item.price_paid)}</span>
                                     </div>
                                 </div>
                             </div>

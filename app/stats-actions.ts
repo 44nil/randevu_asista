@@ -67,17 +67,17 @@ export async function getDashboardStats() {
             .eq('organization_id', orgId)
             .eq('active', true),
 
-        // 5. Recent Sales (for Sales Panel)
-        supabase.from('sales')
+        // 5. Recent Sales (for Sales Panel) - customer_packages tablosundan çek (package_name snapshot içeriyor)
+        supabase.from('customer_packages')
             .select(`
                 id,
-                amount,
-                sale_date,
-                customer:customers(name),
-                package:packages(name)
+                price_paid,
+                created_at,
+                package_name,
+                customer:customers(name)
             `)
             .eq('organization_id', orgId)
-            .order('sale_date', { ascending: false })
+            .order('created_at', { ascending: false })
             .limit(5),
 
         // 6. Upcoming Appointments (Next 3 days maybe? or just today's remainder?)

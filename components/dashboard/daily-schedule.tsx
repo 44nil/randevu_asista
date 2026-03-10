@@ -108,7 +108,7 @@ export function DailySchedule({ data }: DailyScheduleProps) {
                                             : item.groupedCustomers.join(", ")}
                                     </h4>
                                     <p className="text-sm text-slate-500">
-                                        {item.service_id || `Genel ${config.labels.session}`} • {isGroup ? 'Grup' : 'Özel'} {config.labels.appointment}
+                                        {config.appointmentTypes?.find((t: any) => t.value === item.service_id)?.label || item.service_id || config.labels.appointment} • {isGroup ? 'Grup' : 'Özel'} {config.labels.session}
                                     </p>
                                 </div>
 
@@ -148,7 +148,7 @@ export function DailySchedule({ data }: DailyScheduleProps) {
                                 </div>
                                 <div>
                                     <h4 className="text-lg font-bold text-slate-900">
-                                        {selectedItem.service_id || `Genel ${config.labels.session}`}
+                                        {config.appointmentTypes?.find((t: any) => t.value === selectedItem.service_id)?.label || selectedItem.service_id || config.labels.appointment}
                                     </h4>
                                     <p className="text-sm text-slate-500 flex items-center gap-2">
                                         <Clock className="h-3 w-3" />
