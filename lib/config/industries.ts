@@ -194,7 +194,22 @@ export const INDUSTRY_CONFIG: Record<IndustryType, IndustryConfig> = {
     }
 };
 
+// Onboarding'de seçilen sektörleri mevcut DB config'lerine eşler
+const INDUSTRY_ALIAS: Record<string, IndustryType> = {
+    pilates: 'pilates',
+    yoga: 'pilates',
+    pt: 'pilates',
+    dental: 'dental',
+    physio: 'dental',
+    dietitian: 'dental',
+    psychologist: 'dental',
+    hair: 'hair',
+    beauty: 'hair',
+    general: 'general',
+    other: 'general',
+};
+
 export function getIndustryConfig(type?: string): IndustryConfig {
-    const key = (type as IndustryType) || 'general';
-    return INDUSTRY_CONFIG[key] || INDUSTRY_CONFIG.general;
+    const mapped = INDUSTRY_ALIAS[type || ''] || 'general';
+    return INDUSTRY_CONFIG[mapped];
 }

@@ -63,13 +63,15 @@ export async function createOrganization(prevState: any, formData: FormData) {
             .replace(/[^a-z0-9]/g, '-')
             .replace(/-+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
-        // DB Mapping
-        // DB allows: 'hair', 'dental', 'pilates', 'general'
-        const validDbTypes = ['hair', 'dental', 'pilates', 'general'];
-        let dbIndustryType = industryType;
-        if (!validDbTypes.includes(industryType)) {
-            dbIndustryType = 'general';
-        }
+        // DB sadece 4 tipi kabul ediyor: 'pilates' | 'hair' | 'dental' | 'general'
+        // Diğer sektörler alias ile eşlenir (real_industry settings'e kaydedilir)
+        const INDUSTRY_ALIAS: Record<string, string> = {
+            pilates: 'pilates', yoga: 'pilates', pt: 'pilates',
+            dental: 'dental', physio: 'dental', dietitian: 'dental', psychologist: 'dental',
+            hair: 'hair', beauty: 'hair',
+            general: 'general', other: 'general',
+        };
+        const dbIndustryType = INDUSTRY_ALIAS[industryType] || 'general';
 
         // 3. Organizasyonu oluştur
         const { data: org, error: orgError } = await supabase
@@ -109,6 +111,31 @@ export async function createOrganization(prevState: any, formData: FormData) {
                 { name: 'Mat Pilates (Grup)', duration_minutes: 60, price: 500, color: '#f0abfc', category: 'Ders' },
                 { name: 'Deneme Dersi', duration_minutes: 45, price: 250, color: '#e2e8f0', category: 'Ders' }
             ],
+            'yoga': [
+                { name: 'Yoga (Grup)', duration_minutes: 60, price: 400, color: '#a3e635', category: 'Ders' },
+                { name: 'Özel Yoga', duration_minutes: 60, price: 800, color: '#86efac', category: 'Ders' },
+                { name: 'Meditasyon', duration_minutes: 45, price: 300, color: '#c4b5fd', category: 'Ders' }
+            ],
+            'pt': [
+                { name: 'PT Seansı', duration_minutes: 60, price: 800, color: '#ef4444', category: 'Antrenman' },
+                { name: 'Grup Antrenmanı', duration_minutes: 60, price: 400, color: '#f97316', category: 'Antrenman' },
+                { name: 'Online Koçluk', duration_minutes: 30, price: 400, color: '#3b82f6', category: 'Online' }
+            ],
+            'physio': [
+                { name: 'Fizyoterapi Seansı', duration_minutes: 45, price: 1200, color: '#38bdf8', category: 'Tedavi' },
+                { name: 'Manuel Terapi', duration_minutes: 60, price: 1500, color: '#0284c7', category: 'Tedavi' },
+                { name: 'Değerlendirme', duration_minutes: 60, price: 800, color: '#7dd3fc', category: 'Muayene' }
+            ],
+            'dietitian': [
+                { name: 'İlk Muayene', duration_minutes: 45, price: 1000, color: '#84cc16', category: 'Muayene' },
+                { name: 'Kontrol', duration_minutes: 20, price: 500, color: '#84cc16', category: 'Muayene' },
+                { name: 'Online Danışmanlık', duration_minutes: 30, price: 400, color: '#65a30d', category: 'Online' }
+            ],
+            'psychologist': [
+                { name: 'Psikoterapi Seansı', duration_minutes: 50, price: 2000, color: '#a78bfa', category: 'Seans' },
+                { name: 'Çift Terapisi', duration_minutes: 60, price: 2500, color: '#8b5cf6', category: 'Seans' },
+                { name: 'İlk Görüşme', duration_minutes: 60, price: 1500, color: '#c4b5fd', category: 'Muayene' }
+            ],
             'beauty': [
                 { name: 'Cilt Bakımı', duration_minutes: 90, price: 1500, color: '#2dd4bf', category: 'Bakım' },
                 { name: 'Lazer Epilasyon', duration_minutes: 30, price: 2000, color: '#c084fc', category: 'Bakım' },
@@ -122,17 +149,12 @@ export async function createOrganization(prevState: any, formData: FormData) {
                 { name: 'Gelin Başı', duration_minutes: 180, price: 5000, color: '#ec4899', category: 'Özel' },
                 { name: 'Keratin Bakım', duration_minutes: 90, price: 2500, color: '#10b981', category: 'Bakım' }
             ],
-            'pt': [
-                { name: 'PT Seansı', duration_minutes: 60, price: 800, color: '#ef4444', category: 'Antrenman' },
-                { name: 'Online Koçluk', duration_minutes: 30, price: 400, color: '#3b82f6', category: 'Online' }
-            ],
-            'dietitian': [
-                { name: 'İlk Muayene', duration_minutes: 45, price: 1000, color: '#84cc16', category: 'Muayene' },
-                { name: 'Kontrol', duration_minutes: 20, price: 500, color: '#84cc16', category: 'Muayene' }
+            'general': [
+                { name: 'Standart Randevu', duration_minutes: 60, price: 500, color: '#94a3b8', category: 'Genel' }
             ]
         };
 
-        const servicesToAdd = defaultServices[industryType] || defaultServices['hair']; // Fallback
+        const servicesToAdd = defaultServices[industryType] || defaultServices['general'];
 
         if (servicesToAdd && servicesToAdd.length > 0) {
             const servicesWithOrg = servicesToAdd.map(s => ({ ...s, organization_id: org.id }));

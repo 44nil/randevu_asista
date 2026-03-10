@@ -179,11 +179,6 @@ async function linkAndSeedOrg(supabase: any, userId: string, orgId: string, indu
     revalidatePath('/');
     return { success: true };
 }
-    } catch (error: any) {
-        console.error('Unexpected error in createOrganization:', error);
-        return { success: false, error: "Beklenmeyen hata: " + error.message };
-    }
-}
 
 export async function createCustomer(data: any) {
     const { userId } = await getSession();
