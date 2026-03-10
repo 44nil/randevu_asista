@@ -91,93 +91,96 @@ export const getUserProfile = cache(async () => {
     return profile;
 });
 
-export async function createOrganization(data: { name: string, industry: string, subdomain: string }) {
+export async function createOrganization(data: { name: string, industry: string, subdomain?: string }) {
     try {
         const { userId } = await getSession();
         if (!userId) return { success: false, error: "Unauthorized - No user ID" };
 
         const supabase = supabaseAdmin;
 
-        // 1. Create Organization
+        // Subdomain otomatik üret (verilmezse işletme adından)
+        const subdomain = data.subdomain ||
+            data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') +
+            '-' + Math.floor(Math.random() * 9000 + 1000);
+
+        // 1. Organizasyon oluştur
         const { data: org, error: orgError } = await supabase.from('organizations').insert({
             name: data.name,
             industry_type: data.industry,
-            subdomain: data.subdomain,
+            subdomain,
             settings: { sms_enabled: true }
         }).select().single();
 
         if (orgError) {
             console.error('Organization creation error:', orgError);
             if (orgError.code === '23505') {
-                // Attempt to recover: If duplicate, check if we can just link the user to it?
-                // CAUTION: This assumes the user IS the owner who failed to link previously.
-                // In a real multi-user app, we would verify ownership token or similar.
-                // For this MVP debugging: Try to find the org and link.
-
-                const { data: existingOrg } = await supabase
-                    .from('organizations')
-                    .select('id')
-                    .eq('subdomain', data.subdomain)
-                    .single();
-
-                if (existingOrg) {
-                    console.log('Recovering orphaned organization:', existingOrg.id);
-                    const { error: linkError } = await supabase.from('users').update({
-                        organization_id: existingOrg.id,
-                        role: 'owner'
-                    }).eq('clerk_id', userId);
-
-                    if (!linkError) {
-                        revalidatePath('/');
-                        return { success: true };
-                    }
-                }
-
-                return { success: false, error: "Bu isimde veya alt alan adında bir işletme zaten mevcut. Eğer bu sizin işletmenizse tekrar 'Oluştur'a basarak sahiplenmeyi deneyin." };
+                // Duplicate subdomain — yeniden dene farklı subdomain ile
+                const subdomain2 = subdomain + '-' + Math.floor(Math.random() * 9000 + 1000);
+                const { data: org2, error: orgError2 } = await supabase.from('organizations').insert({
+                    name: data.name,
+                    industry_type: data.industry,
+                    subdomain: subdomain2,
+                    settings: { sms_enabled: true }
+                }).select().single();
+                if (orgError2) return { success: false, error: "İşletme oluşturulamadı: " + orgError2.message };
+                return await linkAndSeedOrg(supabase, userId, org2.id, data.industry);
             }
             return { success: false, error: "Organizasyon oluşturulamadı: " + orgError.message };
         }
 
-        console.log('Organization created:', org);
+        return await linkAndSeedOrg(supabase, userId, org.id, data.industry);
 
-        // I probably need to execute this part as ADMIN (Service Role).
-        // Or I need to rely on the fact that I'm just calling an RPC or I have a policy.
+    } catch (error: any) {
+        console.error('createOrganization error:', error);
+        return { success: false, error: "Beklenmeyen hata: " + error.message };
+    }
+}
 
-        // For this MVP, I will try to update. If it fails due to RLS, I will need to use a service role client (which I don't have configured in lib/supabaseClient yet effectively for this action).
-        // BUT checking the schema: 
-        // create policy "Users can view their own data" ...
-        // No Update policy defined! So user CANNOT update themselves by default RLS.
-        // I strictly need a SERVICE_ROLE client for this action.
+async function linkAndSeedOrg(supabase: any, userId: string, orgId: string, industry: string) {
+    // 2. Kullanıcıyı owner olarak bağla
+    const { error: userError } = await supabase.from('users').update({
+        organization_id: orgId,
+        role: 'owner'
+    }).eq('clerk_id', userId);
 
-        // WORKAROUND for this context (since I can't easily add Service Key secrets/logic without asking user):
-        // I will try to use the `supabase` client with the user's token. If I failed to add UPDATE policy, it will fail.
-        // Let's assume for a moment I can insert. 
-        // Wait, the user already approved my schema which had NO update policy for public.users.
+    if (userError) {
+        console.error('User update error:', userError);
+        return { success: false, error: "Kullanıcı güncellenemedi: " + userError.message };
+    }
 
-        // I MUST ADD AN UPDATE POLICY or usage of Service Role.
-        // I'll add a helper function to `lib/supabaseClient.ts` to get a service role client if the key exists, 
-        // but the user only put ANON key in .env.local (based on my previous instructions).
+    // 3. Default servisler ekle
+    const defaultServices: Record<string, any[]> = {
+        pilates: [
+            { name: 'Reformer Pilates (Bireysel)', duration_minutes: 60, price: 750, color: '#fda4af', category: 'Ders' },
+            { name: 'Mat Pilates (Grup)', duration_minutes: 60, price: 500, color: '#f0abfc', category: 'Ders' },
+            { name: 'Deneme Dersi', duration_minutes: 45, price: 250, color: '#e2e8f0', category: 'Ders' },
+        ],
+        hair: [
+            { name: 'Saç Kesimi', duration_minutes: 45, price: 500, color: '#fbbf24', category: 'Saç' },
+            { name: 'Fön', duration_minutes: 30, price: 200, color: '#facc15', category: 'Saç' },
+            { name: 'Saç Boyama', duration_minutes: 120, price: 1500, color: '#a855f7', category: 'Saç' },
+            { name: 'Keratin Bakım', duration_minutes: 90, price: 2500, color: '#10b981', category: 'Bakım' },
+        ],
+        dental: [
+            { name: 'Genel Muayene', duration_minutes: 30, price: 500, color: '#60a5fa', category: 'Muayene' },
+            { name: 'Diş Temizliği', duration_minutes: 45, price: 800, color: '#34d399', category: 'Temizlik' },
+            { name: 'Diş Çekimi', duration_minutes: 30, price: 600, color: '#f87171', category: 'Cerrahi' },
+        ],
+        general: [
+            { name: 'Standart Randevu', duration_minutes: 60, price: 500, color: '#94a3b8', category: 'Genel' },
+        ],
+    };
 
-        // ALTERNATIVE: I will add a policy to allow users to update their own organization_id IF it is currently null.
-        // But I can't run SQL right now easily without asking user.
+    const services = defaultServices[industry] || defaultServices['general'];
+    if (services.length > 0) {
+        await supabase.from('services').insert(
+            services.map((s: any) => ({ ...s, organization_id: orgId }))
+        );
+    }
 
-        // Let's try to do it and if it fails, I will guide the user or add the SQL to the next step.
-        // Actually, I can run SQL via `supabase/schema.sql` if I update it? No, that file is just a reference for the user.
-
-        // Best bet: Write the code. If it errors, I'll give the user a "Fix Permissions" SQL script like I did with the demo seed.
-
-        const { error: userError } = await supabase.from('users').update({
-            organization_id: org.id,
-            role: 'owner'
-        }).eq('clerk_id', userId);
-
-        if (userError) {
-            console.error('User update error:', userError);
-            return { success: false, error: "Kullanıcı güncellenemedi: " + userError.message };
-        }
-
-        revalidatePath('/');
-        return { success: true };
+    revalidatePath('/');
+    return { success: true };
+}
     } catch (error: any) {
         console.error('Unexpected error in createOrganization:', error);
         return { success: false, error: "Beklenmeyen hata: " + error.message };
