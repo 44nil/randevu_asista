@@ -5,8 +5,16 @@ import { Button } from "@/components/ui/button"
 import { Bell } from "lucide-react"
 import { useOrganization } from "@/providers/organization-provider"
 
+type Reminder = {
+    id?: string
+    customer?: { name?: string } | { name?: string }[] | null
+    title?: string
+    date?: string
+    [key: string]: unknown
+}
+
 interface RemindersPanelProps {
-    data?: any[] // Expecting array of upcoming appointments or custom reminders
+    data?: Reminder[] // Expecting array of upcoming appointments or custom reminders
 }
 
 export function RemindersPanel({ data }: RemindersPanelProps) {
@@ -24,12 +32,15 @@ export function RemindersPanel({ data }: RemindersPanelProps) {
                     {!hasData ? (
                         <li className="text-sm text-blue-800/60 italic">Okunmamış bildiriminiz yok.</li>
                     ) : (
-                        data!.map((item, index) => (
-                            <li key={index} className="text-sm text-blue-800 flex items-start gap-2">
-                                <span className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                                {item.customer?.name ? `${item.customer.name} ile ${config.labels.appointment.toLowerCase()} yaklaşıyor.` : "Hatırlatma"}
-                            </li>
-                        ))
+                        data!.map((item, index) => {
+                            const customerName = Array.isArray(item.customer) ? item.customer[0]?.name : item.customer?.name
+                            return (
+                                <li key={index} className="text-sm text-blue-800 flex items-start gap-2">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                                    {customerName ? `${customerName} ile ${config.labels.appointment.toLowerCase()} yaklaşıyor.` : "Hatırlatma"}
+                                </li>
+                            )
+                        })
                     )}
                 </ul>
                 <Button className="w-full bg-white text-blue-600 hover:bg-blue-100 border-none shadow-sm">

@@ -1,7 +1,7 @@
 import { Webhook } from 'svix'
 import { headers } from 'next/headers'
 import { WebhookEvent } from '@clerk/nextjs/server'
-import { createSupabaseClient } from '@/lib/supabaseClient'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function POST(req: Request) {
 
@@ -59,27 +59,13 @@ export async function POST(req: Request) {
 
         // Default role is customer if not specified
         const role = (public_metadata.role as string) || 'customer';
-        // Organization needs to be assigned logic. 
-        // Ideally user is invited to an org or creates one.
-        // For now we sync the user record.
 
-        const supabase = await createSupabaseClient();
-
-        // We use service role key if we need to bypass RLS for creation if strict
-        // But here we rely on the schema allowing inserts potentially or use a service key client.
-        // Actually, createSupabaseClient uses anon key, which might not be enough if RLS blocks insert.
-        // Ideally we should use SERVICE_ROLE_KEY for admin tasks like this sync.
-        // I need to update createSupabaseClient or create a separate admin client.
-
-        // Let's assume for now we use the standard client but we might need to upgrade permissions.
-        // A better approach is usually using the Service Role Key for webhooks.
-
-        const { error } = await supabase.from('users').insert({
+        // Service role key kullanıyoruz — RLS bypass için webhook'ta zorunlu
+        const { error } = await supabaseAdmin.from('users').insert({
             clerk_id: id,
             email: email,
             full_name: fullName,
             role: role,
-            // organization_id: ... needs logic
         });
 
         if (error) {
