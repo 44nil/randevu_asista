@@ -26,7 +26,6 @@ import { CustomerForm } from "@/components/forms/customer-form"
 import { useOrganization } from "@/providers/organization-provider"
 
 const appointmentFormSchema = z.object({
-    title: z.string().min(2, "Başlık en az 2 karakter olmalıdır"),
     customer_ids: z.array(z.string()),
     instructor_id: z.string().optional(),
     appointment_date: z.date(),
@@ -77,7 +76,6 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
     const form = useForm<AppointmentFormValues>({
         resolver: zodResolver(appointmentFormSchema),
         defaultValues: {
-            title: "",
             duration: "60",
             type: config.appointmentTypes?.[0]?.value || "standard",
             max_attendees: "1",
@@ -174,7 +172,6 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
             const end = new Date(start.getTime() + parseInt(values.duration) * 60000)
 
             const res = await createClassSession({
-                title: values.title,
                 type: values.type,
                 instructor_id: values.instructor_id,
                 appointment_date: start.toISOString(),
@@ -211,22 +208,6 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
                 <div className="space-y-4">
                     <h2 className="text-3xl font-black text-navy uppercase tracking-tighter">YENİ {config.labels.appointment.toUpperCase()}</h2>
                     <p className="text-sm text-t3 font-medium">Lütfen gerekli bilgileri eksiksiz doldurun.</p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-6">
-                    <FormField
-                        control={form.control}
-                        name="title"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="text-xs font-black text-navy uppercase tracking-widest">HİZMET BAŞLIĞI</FormLabel>
-                                <FormControl>
-                                    <Input placeholder={`Örn: ${config.labels.appointment} - Muayene`} {...field} className="h-12 rounded-input border-[1.5px] border-border-brand bg-white font-medium text-navy shadow-sm focus:border-electric focus:ring-4 focus:ring-electric/5 transition-all px-4" />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

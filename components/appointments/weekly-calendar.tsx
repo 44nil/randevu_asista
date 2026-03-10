@@ -99,28 +99,17 @@ export function WeeklyCalendar() {
 
                     const processedAppointments: Appointment[] = sessions.map((session: any) => {
                         const sId = session.service_id || ""
-                        const getTitle = (id: string) => {
-                            if (id.includes('reformer')) return config.labels.customer === 'Hasta' ? 'Muayene' : 'Reformer'
-                            if (id.includes('mat')) return config.labels.customer === 'Hasta' ? 'Tedavi' : 'Mat Pilates'
-                            if (id.includes('private') || id.includes('ozel')) return config.labels.customer === 'Hasta' ? 'Özel / Estetik' : `Özel ${config.labels.appointment}`
-                            return session.title || config.labels.appointment
-                        }
 
-                        const title = getTitle(session.service_id)
+                        // Randevu tipinin label'ını config'den bul
+                        const typeConfig = config.appointmentTypes?.find(t => t.value === sId)
+                        const title = typeConfig?.label || config.labels.appointment
 
                         // Map service to a color-type (reformer: navy, mat: electric, private: green)
                         let appointmentCategory: ClassType = 'reformer'
-                        const lowerSearch = (sId + " " + title).toLowerCase()
-
-                        if (lowerSearch.includes('reformer') || lowerSearch.includes('muayene') || lowerSearch.includes('kontrol') || lowerSearch.includes('checkup') || lowerSearch.includes('randevu')) {
-                            appointmentCategory = 'reformer'
-                        } else if (lowerSearch.includes('mat') || lowerSearch.includes('tedavi') || lowerSearch.includes('dolgu')) {
-                            appointmentCategory = 'mat'
-                        } else if (lowerSearch.includes('özel') || lowerSearch.includes('ozel') || lowerSearch.includes('estetik')) {
-                            appointmentCategory = 'private'
-                        } else {
-                            appointmentCategory = 'reformer'
-                        }
+                        // Renk kategorisini config'deki sıraya göre belirle — tüm sektörler için çalışır
+                        const typeIndex = config.appointmentTypes?.findIndex(t => t.value === sId) ?? 0
+                        const colorMap: ClassType[] = ['reformer', 'mat', 'private']
+                        appointmentCategory = colorMap[typeIndex % 3] ?? 'reformer'
 
                         const activeAppointments = session.appointments?.filter((a: any) => a.status !== 'cancelled') || []
                         const participantNames = activeAppointments.map((a: any) => a.customer?.name || "Bilinmiyor")
@@ -174,9 +163,9 @@ export function WeeklyCalendar() {
     }
 
     const categoryColors: Record<ClassType, { bg: string, border: string, text: string }> = {
-        reformer: { bg: 'rgba(46, 102, 241, 0.08)', border: '#2E66F1', text: '#2E66F1' }, // Muayene Blue
-        mat: { bg: 'rgba(62, 185, 241, 0.08)', border: '#3EB9F1', text: '#3EB9F1' },    // Tedavi Light Blue
-        private: { bg: 'rgba(16, 185, 129, 0.08)', border: '#10B981', text: '#10B981' } // Özel Green
+        reformer: { bg: 'rgba(46, 102, 241, 0.08)', border: '#2E66F1', text: '#2E66F1' },
+        mat:      { bg: 'rgba(236, 72, 153, 0.08)', border: '#EC4899', text: '#EC4899' },
+        private:  { bg: 'rgba(16, 185, 129, 0.08)', border: '#10B981', text: '#10B981' }
     }
 
     return (
@@ -242,24 +231,18 @@ export function WeeklyCalendar() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center justify-center">
                     <div className="flex items-center gap-12 flex-wrap bg-white p-5 rounded-[24px] px-12 border border-border-brand/10 shadow-sm max-w-fit transition-all hover:shadow-brand">
-                        <div className="flex items-center gap-4">
-                            <div className="size-5 rounded-full" style={{ backgroundColor: categoryColors.reformer.border }}></div>
-                            <span className="text-[13px] font-bold text-slate-700 uppercase tracking-widest leading-none">
-                                {config.labels.customer === 'Hasta' ? 'MUAYENE' : 'REFORMER'}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="size-5 rounded-full" style={{ backgroundColor: categoryColors.mat.border }}></div>
-                            <span className="text-[13px] font-bold text-slate-700 uppercase tracking-widest leading-none">
-                                {config.labels.customer === 'Hasta' ? 'TEDAVİ' : 'MAT PİLATES'}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="size-5 rounded-full" style={{ backgroundColor: categoryColors.private.border }}></div>
-                            <span className="text-[13px] font-bold text-slate-700 uppercase tracking-widest leading-none">
-                                {config.labels.customer === 'Hasta' ? 'ÖZEL / ESTETİK' : `ÖZEL ${config.labels.appointment.toUpperCase()}`}
-                            </span>
-                        </div>
+                        {config.appointmentTypes?.map((type, i) => {
+                            const colorKeys: ClassType[] = ['reformer', 'mat', 'private']
+                            const colorKey = colorKeys[i % 3]
+                            return (
+                                <div key={type.value} className="flex items-center gap-4">
+                                    <div className="size-5 rounded-full" style={{ backgroundColor: categoryColors[colorKey].border }}></div>
+                                    <span className="text-[13px] font-bold text-slate-700 uppercase tracking-widest leading-none">
+                                        {type.label.toUpperCase()}
+                                    </span>
+                                </div>
+                            )
+                        })}
                     </div>
                 </div>
             </div>
