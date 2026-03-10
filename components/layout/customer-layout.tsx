@@ -10,7 +10,7 @@ import { useOrganization } from "@/providers/organization-provider"
 
 export function CustomerLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
-    const { config } = useOrganization()
+    const { config, organization } = useOrganization()
 
     const navItems = [
         { href: "/", label: "Kontrol Paneli", icon: LayoutDashboard },
@@ -30,9 +30,9 @@ export function CustomerLayout({ children }: { children: React.ReactNode }) {
                         <Logo showText={false} className="shrink-0" iconClassName="w-10 h-10" />
                         <div>
                             <h1 className="font-bold text-slate-800 leading-tight">
-                                {config.labels.customer === 'Hasta' ? 'Mydent Clinic' : 'Elite Pilates'}
+                                {organization?.name || 'İşletme'}
                             </h1>
-                            <p className="text-xs text-slate-500">{config.labels.customer || 'Üye'} Paneli</p>
+                            <p className="text-xs text-slate-500">{config.labels.customer} Paneli</p>
                         </div>
                     </div>
                 </div>

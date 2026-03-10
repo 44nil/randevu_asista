@@ -280,7 +280,7 @@ export async function bookAppointment(
                 .neq('status', 'cancelled');
 
             if ((count || 0) >= sessionData.capacity) {
-                return { success: false, error: "Ders kontenjanı dolu." };
+                return { success: false, error: "Kontenjan dolu, başka bir zaman seçiniz." };
             }
         }
     }
@@ -297,7 +297,7 @@ export async function bookAppointment(
     const packageToUse = validPackages && validPackages.length > 0 ? validPackages[0] : null;
 
     if (!packageToUse) {
-        return { success: false, error: "Aktif paketiniz veya ders hakkınız bulunmamaktadır. Lütfen paket satın alınız." };
+        return { success: false, error: "Aktif paketiniz veya seans hakkınız bulunmamaktadır. Lütfen paket satın alınız." };
     }
 
     // 4. Booking

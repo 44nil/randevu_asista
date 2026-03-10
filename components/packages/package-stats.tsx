@@ -135,7 +135,7 @@ export function PackageStats({ data }: PackageStatsProps) {
                                 </div>
                             </div>
                             <span className="text-xs font-bold text-blue-600">
-                                {config.labels.customer === 'Hasta' ? 'Teşhis' : 'Grup'}
+                                {config.packageTypes[0]?.label || 'Tür 1'}
                             </span>
                         </div>
                         <div className="flex flex-col items-center gap-3">
@@ -145,7 +145,7 @@ export function PackageStats({ data }: PackageStatsProps) {
                                 </div>
                             </div>
                             <span className="text-xs font-bold text-blue-500">
-                                {config.labels.customer === 'Hasta' ? 'Tedavi' : 'Özel'}
+                                {config.packageTypes[1]?.label || 'Tür 2'}
                             </span>
                         </div>
                         <div className="flex flex-col items-center gap-3">
@@ -155,7 +155,7 @@ export function PackageStats({ data }: PackageStatsProps) {
                                 </div>
                             </div>
                             <span className="text-xs font-bold text-blue-400">
-                                {config.labels.customer === 'Hasta' ? 'Cerrahi' : 'Düet'}
+                                {config.packageTypes[2]?.label || 'Tür 3'}
                             </span>
                         </div>
                     </div>

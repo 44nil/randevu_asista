@@ -118,7 +118,7 @@ export async function deleteStaff(id: string) {
 
     if (error) {
         // Likely FK violation
-        return { success: false, error: "Eğitmenin geçmiş randevuları olduğu için silinemiyor. Lütfen pasife alın." };
+        return { success: false, error: "Çalışanın geçmiş randevuları olduğu için silinemiyor. Lütfen pasife alın." };
     }
 
     revalidatePath('/settings');
