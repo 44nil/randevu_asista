@@ -419,6 +419,167 @@ export async function getCustomerHistory() {
     };
 }
 
+// Slot Booking Actions (Auto-slot mode for non-group sectors)
+// -----------------------------------------------------------------------------
+
+export async function getStaffAndServices() {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: user } = await supabase
+        .from('users').select('organization_id').eq('clerk_id', userId).single();
+    if (!user) return { success: false, error: "Unauthorized" };
+
+    const [staffRes, servicesRes] = await Promise.all([
+        supabase.from('users')
+            .select('id, full_name')
+            .eq('organization_id', user.organization_id)
+            .in('role', ['staff', 'owner'])
+            .order('full_name'),
+        supabase.from('services')
+            .select('id, name, duration_minutes, price')
+            .eq('organization_id', user.organization_id)
+            .eq('active', true)
+            .order('name')
+    ]);
+
+    return {
+        success: true,
+        staff: staffRes.data || [],
+        services: servicesRes.data || []
+    };
+}
+
+export async function getAvailableSlots(
+    staffId: string,
+    serviceId: string,
+    weekStartDate: string, // "YYYY-MM-DD" (local date)
+    weekEndDate: string    // "YYYY-MM-DD" (local date)
+) {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: user } = await supabase
+        .from('users').select('organization_id').eq('clerk_id', userId).single();
+    if (!user) return { success: false, error: "Unauthorized" };
+
+    // 1. Service duration
+    const { data: service } = await supabase
+        .from('services')
+        .select('duration_minutes, name')
+        .eq('id', serviceId)
+        .eq('organization_id', user.organization_id)
+        .single();
+    if (!service) return { success: false, error: "Hizmet bulunamadı" };
+    const duration = service.duration_minutes || 60;
+
+    // 2. Staff weekly schedules
+    const { data: schedules } = await supabase
+        .from('staff_schedules')
+        .select('day_of_week, start_time, end_time, is_working_day')
+        .eq('user_id', staffId)
+        .eq('organization_id', user.organization_id);
+
+    // 3. Time offs in range
+    const weekStartISO = weekStartDate + 'T00:00:00Z';
+    const weekEndISO = weekEndDate + 'T23:59:59Z';
+    const { data: timeOffs } = await supabase
+        .from('staff_time_offs')
+        .select('start_date, end_date')
+        .eq('user_id', staffId)
+        .eq('organization_id', user.organization_id)
+        .lte('start_date', weekEndISO)
+        .gte('end_date', weekStartISO);
+
+    // 4. Existing appointments (conflict check)
+    const { data: existingAppts } = await supabase
+        .from('appointments')
+        .select('start_time, end_time')
+        .eq('staff_id', staffId)
+        .neq('status', 'cancelled')
+        .gte('start_time', weekStartISO)
+        .lte('start_time', weekEndISO);
+
+    // Build schedule map: day_of_week → {start, end}
+    const scheduleMap: Record<number, { start: string; end: string }> = {};
+    (schedules || []).forEach(s => {
+        if (s.is_working_day) scheduleMap[s.day_of_week] = { start: s.start_time, end: s.end_time };
+    });
+
+    // Helper: parse appointment time (handles with/without timezone suffix)
+    const parseApptTime = (t: string) => {
+        const hastz = t.endsWith('Z') || /[+-]\d{2}(:?\d{2})?$/.test(t);
+        return new Date(hastz ? t : t + 'Z');
+    };
+
+    // Generate 7 days
+    const result = [];
+    for (let i = 0; i < 7; i++) {
+        // Get date string for day i (use noon UTC to avoid DST issues)
+        const dayObj = new Date(weekStartDate + 'T12:00:00Z');
+        dayObj.setUTCDate(dayObj.getUTCDate() + i);
+        const dateStr = dayObj.toISOString().split('T')[0];
+
+        // day_of_week: 0=Sun, 1=Mon … 6=Sat
+        const dayOfWeek = new Date(dateStr + 'T12:00:00Z').getUTCDay();
+        const schedule = scheduleMap[dayOfWeek];
+
+        if (!schedule) { result.push({ date: dateStr, slots: [] }); continue; }
+
+        // Check time off
+        const dayStart = new Date(dateStr + 'T00:00:00Z');
+        const dayEnd   = new Date(dateStr + 'T23:59:59Z');
+        const isOnTimeOff = (timeOffs || []).some(to => {
+            const s = new Date(to.start_date), e = new Date(to.end_date);
+            return s <= dayEnd && e >= dayStart;
+        });
+        if (isOnTimeOff) { result.push({ date: dateStr, slots: [] }); continue; }
+
+        // Parse schedule times ("09:00:00")
+        const [startH, startM] = schedule.start.split(':').map(Number);
+        const [endH,   endM  ] = schedule.end.split(':').map(Number);
+
+        const schedEndMs = new Date(dateStr + 'T00:00:00Z').setUTCHours(endH, endM, 0, 0);
+
+        const slotTime = new Date(dateStr + 'T00:00:00Z');
+        slotTime.setUTCHours(startH, startM, 0, 0);
+
+        const slots = [];
+        // 30-minute grid; slot is valid if [slot, slot+duration] fits within schedule
+        while (slotTime.getTime() + duration * 60000 <= schedEndMs) {
+            const slotStart = new Date(slotTime);
+            const slotEnd   = new Date(slotTime.getTime() + duration * 60000);
+
+            const hasConflict = (existingAppts || []).some(appt => {
+                const as = parseApptTime(appt.start_time);
+                const ae = appt.end_time
+                    ? parseApptTime(appt.end_time)
+                    : new Date(as.getTime() + 60 * 60000);
+                return as < slotEnd && ae > slotStart;
+            });
+
+            slots.push({ datetime: slotStart.toISOString(), available: !hasConflict });
+            slotTime.setUTCMinutes(slotTime.getUTCMinutes() + 30);
+        }
+
+        result.push({ date: dateStr, slots });
+    }
+
+    return { success: true, data: result, duration, serviceName: service.name };
+}
+
 // Re-export cancellation functions as is (they are fine)
 export async function requestCancellation(appointmentId: string, reason: string) {
     const { userId } = await getSession();

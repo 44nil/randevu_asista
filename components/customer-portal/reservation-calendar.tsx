@@ -8,7 +8,7 @@ import { ChevronLeft, ChevronRight, X, User, Users } from "lucide-react"
 import { format, addDays, startOfWeek, endOfWeek, isSameDay } from "date-fns"
 import { tr } from "date-fns/locale"
 import { cn, parseUTCTime, pluralizeTurkish } from "@/lib/utils"
-import { getAvailableClasses } from "@/app/portal-actions"
+import { getAvailableClasses, getAvailableSlots, getStaffAndServices } from "@/app/portal-actions"
 import { addToWaitlist, removeFromWaitlist } from "@/app/waitlist-actions"
 import { BookingDialog } from "./booking-dialog"
 import { CancelDialog } from "./cancel-dialog"
@@ -29,14 +29,43 @@ export function ReservationCalendar() {
 
     const [currentCustomerId, setCurrentCustomerId] = useState<string | null>(null)
 
-    // Filters
+    // Slot mode states
+    const [selectedStaffId, setSelectedStaffId] = useState<string>("")
+    const [selectedServiceId, setSelectedServiceId] = useState<string>("")
+    const [staffList, setStaffList] = useState<any[]>([])
+    const [servicesList, setServicesList] = useState<any[]>([])
+    const [slotsByDay, setSlotsByDay] = useState<any[][]>(Array.from({ length: 7 }, () => []))
+    const [slotDuration, setSlotDuration] = useState(60)
+
+    // Filters (classes mode)
     const [instructorFilter, setInstructorFilter] = useState("all")
     const [typeFilter, setTypeFilter] = useState("all")
 
-    // Fetch Classes whenever week changes
+    // Classes mode: fetch sessions when week changes
     useEffect(() => {
-        fetchClasses()
-    }, [currentDate])
+        if (config.features.classes) fetchClasses()
+    }, [currentDate, config.features.classes])
+
+    // Slot mode: fetch staff + services once on mount
+    useEffect(() => {
+        if (!config.features.classes) {
+            getStaffAndServices().then(res => {
+                if (res.success) {
+                    setStaffList((res as any).staff || [])
+                    setServicesList((res as any).services || [])
+                }
+            })
+        }
+    }, [config.features.classes])
+
+    // Slot mode: fetch available slots when staff/service/week changes
+    useEffect(() => {
+        if (!config.features.classes && selectedStaffId && selectedServiceId) {
+            fetchSlots()
+        } else if (!config.features.classes) {
+            setSlotsByDay(Array.from({ length: 7 }, () => []))
+        }
+    }, [config.features.classes, selectedStaffId, selectedServiceId, currentDate])
 
     const fetchClasses = async () => {
         setLoading(true)
@@ -54,6 +83,25 @@ export function ReservationCalendar() {
             }
         } catch (error) {
             console.error(error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const fetchSlots = async () => {
+        setLoading(true)
+        const ws = startOfWeek(currentDate, { weekStartsOn: 1 })
+        const we = endOfWeek(currentDate, { weekStartsOn: 1 })
+        const weekStartDate = format(ws, 'yyyy-MM-dd')
+        const weekEndDate   = format(we, 'yyyy-MM-dd')
+        try {
+            const result = await getAvailableSlots(selectedStaffId, selectedServiceId, weekStartDate, weekEndDate)
+            if (result.success && result.data) {
+                setSlotsByDay((result.data as any[]).map(d => d.slots || []))
+                setSlotDuration((result as any).duration || 60)
+            }
+        } catch (err) {
+            console.error(err)
         } finally {
             setLoading(false)
         }
@@ -141,8 +189,16 @@ export function ReservationCalendar() {
             {/* Header section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Haftalık {config.labels.appointment || 'İşlem'} Programı</h1>
-                    <p className="text-slate-500 mt-2 text-base">Size en uygun {config.labels.appointment?.toLowerCase() || 'işlemi'} seçin ve yerinizi ayırtın.</p>
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+                        {config.features.classes
+                            ? `Haftalık ${config.labels.appointment || 'Ders'} Programı`
+                            : `${config.labels.appointment || 'Randevu'} Takvimi`}
+                    </h1>
+                    <p className="text-slate-500 mt-2 text-base">
+                        {config.features.classes
+                            ? `Size en uygun ${config.labels.appointment?.toLowerCase() || 'dersi'} seçin ve yerinizi ayırtın.`
+                            : `Müsait ${config.labels.appointment?.toLowerCase() || 'randevu'} saatlerini görün ve rezervasyon yapın.`}
+                    </p>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-xl py-2 px-4 flex items-center gap-3 shadow-sm min-w-[200px]">
                     <div className="bg-green-50 text-green-600 h-10 w-10 flex items-center justify-center rounded-lg">
@@ -178,6 +234,37 @@ export function ReservationCalendar() {
 
                 {/* Filters */}
                 <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-end">
+                    {!config.features.classes ? (
+                        <>
+                            <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+                                <SelectTrigger className="w-full sm:w-[180px] h-11 bg-slate-50 border-0 rounded-xl font-medium text-slate-600 ring-0 focus:ring-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-green-500"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></svg></span>
+                                        <SelectValue placeholder={`${config.labels.appointment || 'Hizmet'} Seç`} />
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {servicesList.map((s: any) => (
+                                        <SelectItem key={s.id} value={s.id}>{s.name} ({s.duration_minutes} dk)</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+                                <SelectTrigger className="w-full sm:w-[160px] h-11 bg-slate-50 border-0 rounded-xl font-medium text-slate-600 ring-0 focus:ring-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-green-500"><User className="h-4 w-4" /></span>
+                                        <SelectValue placeholder={config.labels.instructor || 'Personel'} />
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {staffList.map((s: any) => (
+                                        <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </>
+                    ) : (
+                    <>
                     <Select value={typeFilter} onValueChange={setTypeFilter}>
                         <SelectTrigger className="w-full sm:w-[160px] h-11 bg-slate-50 border-0 rounded-xl font-medium text-slate-600 ring-0 focus:ring-0">
                             <div className="flex items-center gap-2">
@@ -217,11 +304,13 @@ export function ReservationCalendar() {
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
                         Filtreleri Temizle
                     </Button>
+                    </>
+                    )}
                 </div>
             </div>
 
-            {/* Weekly Timeline Scheduler */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
+            {/* Weekly Timeline Scheduler — group/classes sectors only */}
+            <div className={`bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto ${!config.features.classes ? 'hidden' : ''}`}>
                 <div className="min-w-[1000px] flex">
                     {/* Time Column */}
                     <div className="w-20 flex-shrink-0 bg-white border-r border-slate-100 z-10 sticky left-0">
@@ -327,9 +416,9 @@ export function ReservationCalendar() {
                                                                         ? 'bg-slate-200 text-slate-500'
                                                                         : 'bg-green-500 text-white'}
                                                                 `}>
-                                                                    {group.totalSlots > 1
-                                                                        ? 'GRUP'
-                                                                        : (group.service_id?.toLowerCase() === 'private' ? 'ÖZEL' : (group.service_id || config.labels.appointment?.toUpperCase() || 'İŞLEM')).split(' ')[0]}
+                                                                    {config.features.classes
+                                                                        ? (group.totalSlots > 1 ? 'GRUP' : 'ÖZEL')
+                                                                        : (group.service_id || config.labels.appointment?.toUpperCase() || 'İŞLEM').split(' ')[0]}
                                                                 </span>
                                                                 <span className="text-[10px] font-bold text-slate-400">
                                                                     {format(startDate, 'HH:mm')}
@@ -358,42 +447,48 @@ export function ReservationCalendar() {
                                                             <div className="flex justify-between items-center text-[9px] font-black mt-auto shrink-0 w-full">
                                                                 {group.isBookedByMe ? (
                                                                     <>
-                                                                        <span className={getCapacityColor(group.bookedSlots, group.totalSlots)}>
-                                                                            {capacityLabel}
-                                                                        </span>
-                                                                        <div className="bg-green-100 text-green-700 px-2 py-0.5 rounded-md font-bold flex items-center gap-1">
+                                                                        {config.features.classes && (
+                                                                            <span className={getCapacityColor(group.bookedSlots, group.totalSlots)}>
+                                                                                {capacityLabel}
+                                                                            </span>
+                                                                        )}
+                                                                        <div className="bg-green-100 text-green-700 px-2 py-0.5 rounded-md font-bold flex items-center gap-1 ml-auto">
                                                                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
                                                                             SİZİN
                                                                         </div>
                                                                     </>
                                                                 ) : isFull ? (
                                                                     <>
-                                                                        <span className="text-red-500">DOLU ({capacityLabel})</span>
-                                                                        {group.isOnWaitlist ? (
-                                                                            <button
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    handleLeaveWaitlist(group.waitlistId);
-                                                                                }}
-                                                                                className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-md font-bold text-[9px]"
-                                                                            >
-                                                                                SIRADA: {group.waitlistPosition} ❌
-                                                                            </button>
-                                                                        ) : (
-                                                                            <button
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    handleJoinWaitlist(group.id);
-                                                                                }}
-                                                                                className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md font-bold text-[9px] hover:bg-blue-200"
-                                                                            >
-                                                                                BEKLEME LİSTESİ +
-                                                                            </button>
+                                                                        <span className="text-red-500">
+                                                                            {config.features.classes ? `DOLU (${capacityLabel})` : 'DOLU'}
+                                                                        </span>
+                                                                        {config.features.classes && (
+                                                                            group.isOnWaitlist ? (
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleLeaveWaitlist(group.waitlistId);
+                                                                                    }}
+                                                                                    className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-md font-bold text-[9px]"
+                                                                                >
+                                                                                    SIRADA: {group.waitlistPosition} ❌
+                                                                                </button>
+                                                                            ) : (
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleJoinWaitlist(group.id);
+                                                                                    }}
+                                                                                    className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md font-bold text-[9px] hover:bg-blue-200"
+                                                                                >
+                                                                                    BEKLEME LİSTESİ +
+                                                                                </button>
+                                                                            )
                                                                         )}
                                                                     </>
                                                                 ) : (
-                                                                    <span className={getCapacityColor(group.bookedSlots, group.totalSlots)}>
-                                                                        {capacityLabel}
+                                                                    <span className={config.features.classes ? getCapacityColor(group.bookedSlots, group.totalSlots) : 'text-green-500'}>
+                                                                        {config.features.classes ? capacityLabel : 'MÜSAİT'}
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -409,6 +504,114 @@ export function ReservationCalendar() {
                     </div>
                 </div>
             </div>
+
+            {/* Slot Booking Mode — non-group sectors */}
+            {!config.features.classes && (
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                    {/* Week day header */}
+                    <div className="grid grid-cols-7 border-b border-slate-100">
+                        {weekDays.map((day, i) => {
+                            const isToday    = isSameDay(day, new Date())
+                            const isSelected = isSameDay(day, selectedDate)
+                            const avail = (selectedStaffId && selectedServiceId)
+                                ? (slotsByDay[i]?.filter((s: any) => s.available).length ?? 0)
+                                : null
+                            return (
+                                <button
+                                    key={i}
+                                    type="button"
+                                    onClick={() => setSelectedDate(day)}
+                                    className={`p-3 text-center border-r border-slate-100 last:border-r-0 transition-colors ${
+                                        isSelected ? 'bg-green-50 border-b-2 border-b-green-500' : 'hover:bg-slate-50'
+                                    }`}
+                                >
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                                        {format(day, 'EEE', { locale: tr })}
+                                    </div>
+                                    <div className={`text-2xl font-black ${isToday ? 'text-green-500' : 'text-slate-800'}`}>
+                                        {format(day, 'd')}
+                                    </div>
+                                    {avail !== null && (
+                                        <div className={`text-[10px] font-bold mt-1 ${avail > 0 ? 'text-green-600' : 'text-slate-400'}`}>
+                                            {loading ? '...' : `${avail} müsait`}
+                                        </div>
+                                    )}
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    {/* Selected day slot list */}
+                    <div className="p-6">
+                        {loading ? (
+                            <div className="flex justify-center py-10">
+                                <Loader2 className="h-8 w-8 animate-spin text-green-500" />
+                            </div>
+                        ) : !selectedStaffId || !selectedServiceId ? (
+                            <div className="text-center py-12">
+                                <div className="text-4xl mb-3">📅</div>
+                                <p className="font-bold text-slate-600">Personel ve hizmet seçin</p>
+                                <p className="text-sm text-slate-400 mt-1">Müsait saatleri görmek için yukarıdan seçim yapın</p>
+                            </div>
+                        ) : (() => {
+                            const dayIdx   = weekDays.findIndex(d => isSameDay(d, selectedDate))
+                            const daySlots: any[] = slotsByDay[dayIdx] || []
+                            const selService = servicesList.find((s: any) => s.id === selectedServiceId)
+                            const selStaff   = staffList.find((s: any) => s.id === selectedStaffId)
+                            return (
+                                <div>
+                                    <h3 className="font-bold text-slate-700 mb-4">
+                                        {format(selectedDate, 'd MMMM EEEE', { locale: tr })}
+                                        <span className="ml-2 text-sm font-normal text-slate-400">
+                                            · {selService?.duration_minutes || slotDuration} dk · {selStaff?.full_name}
+                                        </span>
+                                    </h3>
+                                    {daySlots.length === 0 ? (
+                                        <div className="text-center py-8 text-slate-400">
+                                            <p className="font-semibold">Bu gün için müsait saat yok</p>
+                                            <p className="text-sm mt-1">Başka bir gün seçebilirsiniz</p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                                            {daySlots.map((slot: any, idx: number) => {
+                                                const slotDate = parseUTCTime(slot.datetime)
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        type="button"
+                                                        disabled={!slot.available}
+                                                        onClick={() => {
+                                                            if (slot.available) {
+                                                                const endDt = new Date(new Date(slot.datetime).getTime() + slotDuration * 60000)
+                                                                setSelectedClass({
+                                                                    id: undefined,
+                                                                    start_time: slot.datetime,
+                                                                    end_time: endDt.toISOString(),
+                                                                    service_id: selService?.name || selectedServiceId,
+                                                                    staff_id: selectedStaffId,
+                                                                    staff: selStaff
+                                                                })
+                                                                setBookingOpen(true)
+                                                            }
+                                                        }}
+                                                        className={`p-3 rounded-xl text-sm font-bold text-center transition-all ${
+                                                            slot.available
+                                                                ? 'bg-green-50 border-2 border-green-200 text-green-700 hover:bg-green-500 hover:text-white hover:border-green-500 hover:scale-105 cursor-pointer'
+                                                                : 'bg-slate-50 border border-slate-100 text-slate-300 cursor-not-allowed line-through'
+                                                        }`}
+                                                    >
+                                                        {format(slotDate, 'HH:mm')}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })()}
+                    </div>
+                </div>
+            )}
 
             {/* Footer Legend */}
             <div className="flex items-center gap-6 px-4">
