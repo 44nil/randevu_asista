@@ -575,29 +575,46 @@ export function ReservationCalendar() {
                                         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
                                             {daySlots.map((slot: any, idx: number) => {
                                                 const slotDate = parseUTCTime(slot.datetime)
+                                                const isBreakTime = slot.reason === 'break'
+                                                const isBooked = slot.reason === 'appointment'
+                                                
                                                 return (
-                                                    <button
-                                                        key={idx}
-                                                        type="button"
-                                                        disabled={!slot.available}
-                                                        onClick={() => {
-                                                            if (slot.available) {
-                                                                const endDt = new Date(new Date(slot.datetime).getTime() + slotDuration * 60000)
-                                                                setSelectedClass({
-                                                                    id: undefined,
-                                                                    start_time: slot.datetime,
-                                                                    end_time: endDt.toISOString(),
-                                                                    service_id: selService?.name || selectedServiceId,
-                                                                    staff_id: selectedStaffId,
-                                                                    staff: selStaff
-                                                                })
-                                                                setBookingOpen(true)
-                                                            }
-                                                        }}
-                                                        className={`p-3 rounded-xl text-sm font-bold text-center transition-all ${
-                                                            slot.available
-                                                                ? 'bg-green-50 border-2 border-green-200 text-green-700 hover:bg-green-500 hover:text-white hover:border-green-500 hover:scale-105 cursor-pointer'
-                                                                : 'bg-slate-50 border border-slate-100 text-slate-300 cursor-not-allowed line-through'
+                                                    <div key={idx} className="relative group">
+                                                        <button
+                                                            type="button"
+                                                            disabled={!slot.available}
+                                                            onClick={() => {
+                                                                if (slot.available) {
+                                                                    const endDt = new Date(new Date(slot.datetime).getTime() + slotDuration * 60000)
+                                                                    setSelectedClass({
+                                                                        id: undefined,
+                                                                        start_time: slot.datetime,
+                                                                        end_time: endDt.toISOString(),
+                                                                        service_id: selService?.name || selectedServiceId,
+                                                                        staff_id: selectedStaffId,
+                                                                        staff: selStaff
+                                                                    })
+                                                                    setBookingOpen(true)
+                                                                }
+                                                            }}
+                                                            className={`w-full p-3 rounded-xl text-sm font-bold text-center transition-all ${
+                                                                slot.available
+                                                                    ? 'bg-green-50 border-2 border-green-200 text-green-700 hover:bg-green-500 hover:text-white hover:border-green-500 hover:scale-105 cursor-pointer'
+                                                                    : isBreakTime
+                                                                        ? 'bg-orange-50 border border-orange-200 text-orange-400 cursor-not-allowed'
+                                                                        : 'bg-slate-50 border border-slate-100 text-slate-300 cursor-not-allowed line-through'
+                                                            }`}
+                                                        >
+                                                            {format(slotDate, 'HH:mm')}
+                                                        </button>
+                                                        
+                                                        {/* Tooltip for unavailable slots */}
+                                                        {!slot.available && (
+                                                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap pointer-events-none">
+                                                                {isBreakTime ? '☕ Mola Zamanı' : isBooked ? '📅 Dolu' : '❌ Müsait Değil'}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                         }`}
                                                     >
                                                         {format(slotDate, 'HH:mm')}

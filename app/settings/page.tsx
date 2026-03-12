@@ -9,6 +9,7 @@ import { CancelPolicy } from "@/components/settings/cancel-policy"
 import { NotificationSettings } from "@/components/settings/notification-settings"
 import { SecurityProfile } from "@/components/settings/security-profile"
 import { StaffList } from "@/components/settings/staff-list"
+import { LunchBreakSettings } from "@/components/settings/lunch-break-settings"
 import { getOrganizationSettings } from "@/app/settings/actions"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -83,6 +84,7 @@ export default function SettingsPage() {
                     <TabsTrigger value="team" className="px-4 py-2 text-sm">Ekip Yönetimi</TabsTrigger>
                     <TabsTrigger value="general" className="px-4 py-2 text-sm">Salon Bilgileri</TabsTrigger>
                     <TabsTrigger value="hours" className="px-4 py-2 text-sm">Çalışma Saatleri</TabsTrigger>
+                    <TabsTrigger value="lunch" className="px-4 py-2 text-sm">Öğle Arası</TabsTrigger>
                     <TabsTrigger value="policy" className="px-4 py-2 text-sm">İptal Politikası</TabsTrigger>
                     <TabsTrigger value="notifications" className="px-4 py-2 text-sm">Bildirimler</TabsTrigger>
                     <TabsTrigger value="profile" className="px-4 py-2 text-sm">Profil</TabsTrigger>
@@ -98,6 +100,26 @@ export default function SettingsPage() {
 
                 <TabsContent value="hours" className="space-y-6">
                     <WorkingHours settings={settings?.settings} />
+                </TabsContent>
+
+                <TabsContent value="lunch" className="space-y-6">
+                    {settings?.organization?.id ? (
+                        <LunchBreakSettings 
+                            orgId={settings.organization.id}
+                            initialSettings={{
+                                lunch_break_enabled: settings?.organization?.lunch_break_enabled ?? true,
+                                lunch_break_start: settings?.organization?.lunch_break_start ?? "12:00:00",
+                                lunch_break_end: settings?.organization?.lunch_break_end ?? "13:00:00"
+                            }}
+                        />
+                    ) : (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+                            <p className="text-yellow-800">Organizasyon bilgileri yükleniyor...</p>
+                            <p className="text-sm text-yellow-600 mt-2">
+                                Settings data: {JSON.stringify(settings?.organization, null, 2)}
+                            </p>
+                        </div>
+                    )}
                 </TabsContent>
 
                 <TabsContent value="policy" className="space-y-6 flex flex-col gap-6">

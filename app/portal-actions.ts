@@ -475,7 +475,14 @@ export async function getAvailableSlots(
         .from('users').select('organization_id').eq('clerk_id', userId).single();
     if (!user) return { success: false, error: "Unauthorized" };
 
-    // 1. Service duration
+    // 1. Get organization lunch break settings
+    const { data: organization } = await supabase
+        .from('organizations')
+        .select('lunch_break_enabled, lunch_break_start, lunch_break_end')
+        .eq('id', user.organization_id)
+        .single();
+
+    // 2. Service duration
     const { data: service } = await supabase
         .from('services')
         .select('duration_minutes, name')
@@ -485,7 +492,7 @@ export async function getAvailableSlots(
     if (!service) return { success: false, error: "Hizmet bulunamadı" };
     const duration = service.duration_minutes || 60;
 
-    // 2. Staff weekly schedules
+    // 3. Staff weekly schedules
     const { data: schedules } = await supabase
         .from('staff_schedules')
         .select('day_of_week, start_time, end_time, is_working_day')
@@ -515,13 +522,40 @@ export async function getAvailableSlots(
     // Build schedule map: day_of_week → {start, end}
     const scheduleMap: Record<number, { start: string; end: string }> = {};
     (schedules || []).forEach(s => {
-        if (s.is_working_day) scheduleMap[s.day_of_week] = { start: s.start_time, end: s.end_time };
+        if (s.is_working_day) {
+            scheduleMap[s.day_of_week] = { 
+                start: s.start_time, 
+                end: s.end_time
+            };
+        }
     });
 
     // Helper: parse appointment time (handles with/without timezone suffix)
     const parseApptTime = (t: string) => {
         const hastz = t.endsWith('Z') || /[+-]\d{2}(:?\d{2})?$/.test(t);
         return new Date(hastz ? t : t + 'Z');
+    };
+
+    // Helper: check if slot conflicts with organization lunch break
+    const isInBreakTime = (slotStart: Date, slotEnd: Date) => {
+        // Check organization lunch break
+        if (organization?.lunch_break_enabled) {
+            const dateStr = slotStart.toISOString().split('T')[0];
+            const [lunchStartH, lunchStartM] = (organization.lunch_break_start || "12:00:00").split(':').map(Number);
+            const [lunchEndH, lunchEndM] = (organization.lunch_break_end || "13:00:00").split(':').map(Number);
+            
+            const lunchStart = new Date(dateStr + 'T00:00:00Z');
+            lunchStart.setUTCHours(lunchStartH, lunchStartM, 0, 0);
+            
+            const lunchEnd = new Date(dateStr + 'T00:00:00Z');
+            lunchEnd.setUTCHours(lunchEndH, lunchEndM, 0, 0);
+            
+            if (slotStart < lunchEnd && slotEnd > lunchStart) {
+                return true;
+            }
+        }
+
+        return false;
     };
 
     // Generate 7 days
@@ -562,6 +596,7 @@ export async function getAvailableSlots(
             const slotStart = new Date(slotTime);
             const slotEnd   = new Date(slotTime.getTime() + duration * 60000);
 
+            // Check appointment conflicts
             const hasConflict = (existingAppts || []).some(appt => {
                 const as = parseApptTime(appt.start_time);
                 const ae = appt.end_time
@@ -570,7 +605,14 @@ export async function getAvailableSlots(
                 return as < slotEnd && ae > slotStart;
             });
 
-            slots.push({ datetime: slotStart.toISOString(), available: !hasConflict });
+            // Check lunch break conflicts
+            const isInBreak = isInBreakTime(slotStart, slotEnd);
+
+            slots.push({ 
+                datetime: slotStart.toISOString(), 
+                available: !hasConflict && !isInBreak,
+                reason: hasConflict ? 'appointment' : isInBreak ? 'break' : undefined
+            });
             slotTime.setUTCMinutes(slotTime.getUTCMinutes() + 30);
         }
 

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@theme inline {
+:root {
   --color-navy: #0F2044;
   --color-navy-mid: #1A3360;
   --color-electric: #2563EB;
@@ -32,11 +32,15 @@
 
 @layer base {
   * {
-    @apply border-border-brand/50 outline-none;
+    border-color: rgb(200 213 238 / 0.5);
+    outline: none;
   }
 
   body {
-    @apply bg-bg text-t1 leading-relaxed font-sans;
+    background-color: var(--color-bg);
+    color: var(--color-t1);
+    line-height: 1.625;
+    font-family: var(--font-sans);
     font-size: 13px;
     font-weight: 400;
   }
@@ -47,8 +51,10 @@
   h4,
   h5,
   h6 {
-    @apply font-sans font-extrabold text-navy tracking-tight;
+    font-family: var(--font-sans);
     font-weight: 800;
+    color: var(--color-navy);
+    letter-spacing: -0.025em;
   }
 }
 

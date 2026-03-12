@@ -31,14 +31,35 @@ export function ProgramClient({ role, staffId }: ProgramClientProps) {
                             {config.labels.createAppointment}
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle className="sr-only">{config.labels.createAppointment}</DialogTitle>
-                        </DialogHeader>
-                        <AppointmentForm staffId={staffId} onSuccess={() => {
-                            setOpen(false)
-                            window.location.reload()
-                        }} />
+                    <DialogContent
+                        className="max-w-3xl border-none bg-white p-0"
+                        style={{ display: 'flex', flexDirection: 'column', maxHeight: '92vh' }}
+                    >
+                        <div className="px-6 pt-6 pb-3 border-b border-slate-100 shrink-0">
+                            <DialogHeader>
+                                <DialogTitle className="text-lg font-black text-navy uppercase tracking-tight">{config.labels.createAppointment}</DialogTitle>
+                            </DialogHeader>
+                        </div>
+                        <div className="flex-1 overflow-y-auto min-h-0">
+                            <AppointmentForm
+                                formId="program-apt-form"
+                                hideSubmit
+                                staffId={staffId}
+                                onSuccess={() => {
+                                    setOpen(false)
+                                    window.location.reload()
+                                }}
+                            />
+                        </div>
+                        <div className="px-6 py-4 border-t border-slate-200 bg-white shrink-0">
+                            <button
+                                type="submit"
+                                form="program-apt-form"
+                                style={{ background: '#2E66F1', color: '#fff', width: '100%', height: '56px', borderRadius: '12px', fontWeight: 900, fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}
+                            >
+                                {config.labels.createAppointment.toUpperCase()}
+                            </button>
+                        </div>
                     </DialogContent>
                 </Dialog>
             }

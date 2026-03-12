@@ -13,13 +13,15 @@ export async function getOrganizationSettings() {
         process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
         .from('users')
         .select('organization_id')
         .eq('clerk_id', userId)
         .single();
 
-    if (!userData?.organization_id) return { success: false, error: "No org" };
+    if (!userData?.organization_id) {
+        return { success: false, error: "No org" };
+    }
 
     const { data, error } = await supabase
         .from('organizations')
@@ -28,11 +30,11 @@ export async function getOrganizationSettings() {
         .single();
 
     if (error) {
-        console.error(error);
+        console.error('Organization fetch error:', error);
         return { success: false, error: error.message };
     }
 
-    return { success: true, data: data };
+    return { success: true, data: { organization: data } };
 }
 
 export async function updateOrganizationSettings(data: {

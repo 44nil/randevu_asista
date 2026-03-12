@@ -50,7 +50,7 @@ interface Appointment {
 }
 
 export function WeeklyCalendar() {
-    const { config } = useOrganization()
+    const { config, organization } = useOrganization()
     const { session } = useSession()
     const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
     const [appointments, setAppointments] = useState<Appointment[]>([])
@@ -213,16 +213,34 @@ export function WeeklyCalendar() {
                                 <Plus className="h-4 w-4" /> Yeni
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 border-none">
-                            <DialogHeader className="sr-only">
-                                <DialogTitle>Yeni {config.labels.appointment}</DialogTitle>
-                            </DialogHeader>
-                            <AppointmentForm
-                                staffId={session?.user?.id}
-                                onSuccess={() => {
-                                    window.location.reload()
-                                }}
-                            />
+                        <DialogContent
+                            className="max-w-3xl border-none bg-white p-0"
+                            style={{ display: 'flex', flexDirection: 'column', maxHeight: '92vh' }}
+                        >
+                            <div className="px-6 pt-6 pb-3 border-b border-slate-100 shrink-0">
+                                <DialogHeader>
+                                    <DialogTitle className="text-lg font-black text-navy uppercase tracking-tight">Yeni {config.labels.appointment}</DialogTitle>
+                                </DialogHeader>
+                            </div>
+                            <div className="flex-1 overflow-y-auto min-h-0">
+                                <AppointmentForm
+                                    formId="weekly-cal-apt-form"
+                                    hideSubmit
+                                    staffId={session?.user?.id}
+                                    onSuccess={() => {
+                                        window.location.reload()
+                                    }}
+                                />
+                            </div>
+                            <div className="px-6 py-4 border-t border-slate-200 bg-white shrink-0">
+                                <button
+                                    type="submit"
+                                    form="weekly-cal-apt-form"
+                                    style={{ background: '#2E66F1', color: '#fff', width: '100%', height: '56px', borderRadius: '12px', fontWeight: 900, fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}
+                                >
+                                    {config.labels.appointment.toUpperCase()} OLUŞTUR
+                                </button>
+                            </div>
                         </DialogContent>
                     </Dialog>
                 </div>
@@ -275,13 +293,34 @@ export function WeeklyCalendar() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto max-h-[800px]">
-                    {timeSlots.map((hour) => (
-                        <div key={hour} className="grid grid-cols-8 min-h-[95px] border-b border-border-brand/40 last:border-b-0">
-                            <div className="p-2 border-r border-border-brand/40 text-[12px] text-t3 font-bold text-center pt-5 sticky left-0 bg-white/95 backdrop-blur-sm z-20">
+                    {timeSlots.map((hour) => {
+                        const lunchEnabled = organization?.settings?.lunch_break_enabled ?? true
+                        const lunchStart = organization?.settings?.lunch_break_start ?? "12:00:00"
+                        const lunchEnd = organization?.settings?.lunch_break_end ?? "13:00:00"
+                        const lunchStartH = parseInt(lunchStart.split(':')[0])
+                        const lunchEndH = parseInt(lunchEnd.split(':')[0])
+                        const isLunchHour = lunchEnabled && hour >= lunchStartH && hour < lunchEndH
+
+                        return (
+                        <div key={hour} className={cn("grid grid-cols-8 min-h-[95px] border-b border-border-brand/40 last:border-b-0", isLunchHour && "min-h-[60px]")}>
+                            <div className={cn("p-2 border-r border-border-brand/40 text-[12px] font-bold text-center pt-5 sticky left-0 backdrop-blur-sm z-20", isLunchHour ? "text-orange-400 bg-orange-50/80" : "text-t3 bg-white/95")}>
                                 {`${hour.toString().padStart(2, '0')}:00`}
                             </div>
                             {weekDays.map((day, dayIndex) => {
                                 const activeSlotAppointments = getAppointmentsForSlot(day, hour)
+                                if (isLunchHour) {
+                                    return (
+                                        <div key={dayIndex} className="relative border-r border-border-brand/40 last:border-r-0 overflow-hidden"
+                                            style={{ background: 'repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(251,146,60,0.07) 6px, rgba(251,146,60,0.07) 12px)', backgroundColor: 'rgba(255,237,213,0.4)' }}
+                                        >
+                                            {dayIndex === 0 && (
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <span className="text-[9px] font-black text-orange-400 uppercase tracking-widest">ÖĞLE ARASI</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                }
                                 return (
                                     <div key={dayIndex} className="relative p-1.5 border-r border-border-brand/40 last:border-r-0 hover:bg-bg/20 transition-colors group h-full bg-white">
                                         {activeSlotAppointments.map(apt => (
@@ -339,7 +378,8 @@ export function WeeklyCalendar() {
                                 )
                             })}
                         </div>
-                    ))}
+                        )
+                    })}
                 </div>
             </div>
 

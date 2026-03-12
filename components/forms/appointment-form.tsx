@@ -43,15 +43,17 @@ interface AppointmentFormProps {
     onSuccess?: () => void
     defaultDate?: Date
     staffId?: string
+    formId?: string
+    hideSubmit?: boolean
 }
 
-export function AppointmentForm({ onSuccess, defaultDate, staffId }: AppointmentFormProps) {
+export function AppointmentForm({ onSuccess, defaultDate, staffId, formId = "appointment-form", hideSubmit = false }: AppointmentFormProps) {
     const { config, organization } = useOrganization()
     const [customers, setCustomers] = useState<any[]>([])
     const [staffList, setStaffList] = useState<any[]>([])
     const [schedules, setSchedules] = useState<any[]>([])
     const [timeOffs, setTimeOffs] = useState<any[]>([])
-    const [availableTimes, setAvailableTimes] = useState<string[]>([])
+    const [availableTimes, setAvailableTimes] = useState<{ value: string; isLunch: boolean }[]>([])
     const [loading, setLoading] = useState(false)
     const [mounted, setMounted] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")
@@ -120,13 +122,28 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
     useEffect(() => {
         if (!appointmentDate) return
 
-        const times: string[] = []
+        const lunchEnabled = organization?.settings?.lunch_break_enabled ?? true
+        const lunchStart = organization?.settings?.lunch_break_start ?? "12:00:00"
+        const lunchEnd = organization?.settings?.lunch_break_end ?? "13:00:00"
+
+        const [lunchStartH, lunchStartM] = lunchStart.split(':').map(Number)
+        const [lunchEndH, lunchEndM] = lunchEnd.split(':').map(Number)
+        const lunchStartMins = lunchStartH * 60 + lunchStartM
+        const lunchEndMins = lunchEndH * 60 + lunchEndM
+
+        const times: { value: string; isLunch: boolean }[] = []
         for (let h = 8; h <= 20; h++) {
-            times.push(`${h.toString().padStart(2, '0')}:00`)
-            times.push(`${h.toString().padStart(2, '0')}:30`)
+            for (const m of [0, 30]) {
+                const totalMins = h * 60 + m
+                const isLunch = lunchEnabled && totalMins >= lunchStartMins && totalMins < lunchEndMins
+                times.push({
+                    value: `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`,
+                    isLunch
+                })
+            }
         }
         setAvailableTimes(times)
-    }, [appointmentDate])
+    }, [appointmentDate, organization])
 
     const PAGE_SIZE = 5
 
@@ -204,7 +221,7 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 p-6 bg-white overflow-visible">
+            <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-white overflow-visible p-6">
                 <div className="space-y-4">
                     <h2 className="text-3xl font-black text-navy uppercase tracking-tighter">YENİ {config.labels.appointment.toUpperCase()}</h2>
                     <p className="text-sm text-t3 font-medium">Lütfen gerekli bilgileri eksiksiz doldurun.</p>
@@ -427,8 +444,18 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent className="bg-white border-border-brand/30 shadow-elevated">
-                                        {availableTimes.map(time => (
-                                            <SelectItem key={time} value={time} className="font-medium">{time}</SelectItem>
+                                        {availableTimes.map(({ value, isLunch }) => (
+                                            <SelectItem
+                                                key={value}
+                                                value={value}
+                                                disabled={isLunch}
+                                                className={isLunch ? "opacity-40 cursor-not-allowed" : "font-medium"}
+                                            >
+                                                <span className="flex items-center gap-2">
+                                                    {value}
+                                                    {isLunch && <span className="text-[10px] text-orange-500 font-bold">— Öğle Arası</span>}
+                                                </span>
+                                            </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -559,16 +586,18 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId }: Appointment
                     </div>
                 )}
 
-                <Button
-                    type="submit"
-                    className={cn(
-                        "w-full bg-electric text-white rounded-btn font-black text-sm shadow-cta hover:bg-navy transition-all h-14 uppercase tracking-widest",
-                        formError && "bg-red-600 hover:bg-red-700 shadow-none"
-                    )}
-                    disabled={loading}
-                >
-                    {loading ? "Planlanıyor..." : `${config.labels.appointment.toUpperCase()} OLUŞTUR`}
-                </Button>
+                {!hideSubmit && (
+                    <Button
+                        type="submit"
+                        className={cn(
+                            "w-full bg-electric text-white rounded-btn font-black text-sm shadow-cta hover:bg-navy transition-all h-14 uppercase tracking-widest",
+                            formError && "bg-red-600 hover:bg-red-700 shadow-none"
+                        )}
+                        disabled={loading}
+                    >
+                        {loading ? "Planlanıyor..." : `${config.labels.appointment.toUpperCase()} OLUŞTUR`}
+                    </Button>
+                )}
             </form>
         </Form>
     )

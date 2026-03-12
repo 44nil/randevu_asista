@@ -56,7 +56,7 @@ export function Sidebar({ role }: { role?: string }) {
     const industryLabel = industryLabelMap[organization?.industry_type || 'general'] || 'YÖNETİM PANELİ'
 
     return (
-        <div className="w-64 border-r border-r-indigo-900/30 bg-navy h-screen flex flex-col fixed left-0 top-0 overflow-y-auto z-10 transition-all duration-300">
+        <div className="w-64 border-r border-r-indigo-900/30 h-screen flex flex-col fixed left-0 top-0 overflow-y-auto z-10 transition-all duration-300" style={{ backgroundColor: '#0F2044' }}>
             {/* Logo Area */}
             <div className="p-6">
                 <Logo variant="dark" className="mb-2" />
@@ -70,12 +70,18 @@ export function Sidebar({ role }: { role?: string }) {
                     const isActive = pathname === item.href
                     return (
                         <Link key={item.href} href={item.href}>
-                            <div className={cn(
-                                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                                isActive
-                                    ? "bg-electric text-white shadow-sm shadow-blue-900/50"
-                                    : "text-slate-300 hover:bg-white/5 hover:text-white"
-                            )}>
+                            <div 
+                                className={cn(
+                                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                                    isActive
+                                        ? "text-white"
+                                        : "text-slate-300 hover:bg-white/5 hover:text-white"
+                                )}
+                                style={isActive ? {
+                                    backgroundColor: '#1A365D',
+                                    borderLeft: '4px solid #60a5fa'
+                                } : {}}
+                            >
                                 <item.icon className={cn("h-4 w-4", isActive ? "text-white" : "text-slate-400")} />
                                 {item.label}
                             </div>
