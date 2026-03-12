@@ -29,6 +29,7 @@ import { cn, parseUTCTime } from "@/lib/utils"
 import { useOrganization } from "@/providers/organization-provider"
 import { getAppointments } from "@/app/appointment-actions"
 import { AppointmentForm } from "@/components/forms/appointment-form"
+import { EditAppointmentDialog } from "@/components/appointments/edit-appointment-dialog"
 import { useSession } from "@clerk/nextjs"
 import { getStaffList } from "@/app/staff-actions"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -57,6 +58,7 @@ export function WeeklyCalendar() {
     const [loading, setLoading] = useState(true)
     const [detailOpen, setDetailOpen] = useState(false)
     const [selectedSlot, setSelectedSlot] = useState<Appointment | null>(null)
+    const [editOpen, setEditOpen] = useState(false)
     const [stats, setStats] = useState({
         totalMembers: 0,
         completedClasses: 0,
@@ -66,6 +68,7 @@ export function WeeklyCalendar() {
     const [staffList, setStaffList] = useState<any[]>([])
     const [selectedStaffId, setSelectedStaffId] = useState<string>("all")
     const [mounted, setMounted] = useState(false)
+    const [refreshKey, setRefreshKey] = useState(0)
 
     useEffect(() => {
         setMounted(true)
@@ -150,7 +153,7 @@ export function WeeklyCalendar() {
         }
 
         fetchAppointments()
-    }, [weekStart, config.labels.customer, selectedStaffId])
+    }, [weekStart, config.labels.customer, selectedStaffId, refreshKey])
 
     const nextWeek = () => setWeekStart(addWeeks(weekStart, 1))
     const prevWeek = () => setWeekStart(subWeeks(weekStart, 1))
@@ -508,7 +511,7 @@ export function WeeklyCalendar() {
                                     <Button variant="outline" className="flex-1 h-11 text-xs font-black uppercase tracking-widest border-border-brand/30 text-t2 rounded-btn hover:bg-bg" onClick={() => setDetailOpen(false)}>
                                         Kapat
                                     </Button>
-                                    <Button className="flex-1 h-11 text-xs font-black uppercase tracking-widest bg-navy text-white rounded-btn shadow-cta hover:bg-electric transition-all">
+                                    <Button style={{ background: '#0F2044', color: '#fff' }} className="flex-1 h-11 text-xs font-black uppercase tracking-widest rounded-btn transition-all" onClick={() => { setDetailOpen(false); setEditOpen(true) }}>
                                         Düzenle
                                     </Button>
                                 </div>
@@ -517,6 +520,13 @@ export function WeeklyCalendar() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            <EditAppointmentDialog
+                open={editOpen}
+                onOpenChange={setEditOpen}
+                appointment={selectedSlot}
+                onSuccess={() => setRefreshKey(k => k + 1)}
+            />
         </div>
     )
 }

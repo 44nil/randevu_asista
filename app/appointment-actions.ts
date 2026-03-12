@@ -311,3 +311,81 @@ export async function createClassSession(data: {
     revalidatePath('/program');
     return { success: true };
 }
+
+export async function updateClassSession(sessionId: string, data: {
+    instructor_id?: string
+    start_time?: string
+    duration_minutes?: number
+    type?: string
+    capacity?: number
+}) {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const { data: userData } = await supabaseAdmin
+        .from('users')
+        .select('organization_id')
+        .eq('clerk_id', userId)
+        .single();
+
+    if (!userData?.organization_id) return { success: false, error: "No organization found" };
+
+    // Resolve instructor UUID if Clerk ID
+    let instructorId = data.instructor_id;
+    if (instructorId?.startsWith('user_')) {
+        const { data: u } = await supabaseAdmin.from('users').select('id').eq('clerk_id', instructorId).single();
+        if (u) instructorId = u.id;
+    }
+
+    const updatePayload: any = { service_id: data.type, capacity: data.capacity };
+    if (instructorId) updatePayload.instructor_id = instructorId;
+
+    if (data.start_time && data.duration_minutes) {
+        const start = new Date(data.start_time);
+        const end = new Date(start.getTime() + data.duration_minutes * 60000);
+        updatePayload.start_time = start.toISOString();
+        updatePayload.end_time = end.toISOString();
+    }
+
+    const { error } = await supabaseAdmin
+        .from('class_sessions')
+        .update(updatePayload)
+        .eq('id', sessionId)
+        .eq('organization_id', userData.organization_id);
+
+    if (error) return { success: false, error: error.message };
+
+    revalidatePath('/program');
+    revalidatePath('/reservations');
+    return { success: true };
+}
+
+export async function deleteClassSession(sessionId: string) {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const { data: userData } = await supabaseAdmin
+        .from('users')
+        .select('organization_id')
+        .eq('clerk_id', userId)
+        .single();
+
+    if (!userData?.organization_id) return { success: false, error: "No organization found" };
+
+    // Cancel all appointments in session first
+    await supabaseAdmin
+        .from('appointments')
+        .update({ status: 'cancelled' })
+        .eq('session_id', sessionId);
+
+    const { error } = await supabaseAdmin
+        .from('class_sessions')
+        .delete()
+        .eq('id', sessionId)
+        .eq('organization_id', userData.organization_id);
+
+    if (error) return { success: false, error: error.message };
+
+    revalidatePath('/program');
+    revalidatePath('/reservations');    return { success: true };
+}
