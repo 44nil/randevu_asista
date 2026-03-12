@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useOrganization } from "@/providers/organization-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -36,6 +37,7 @@ interface MembersTableProps {
 
 export function MembersTable({ data, onRefresh }: MembersTableProps) {
     const { config } = useOrganization()
+    const router = useRouter()
     const [searchTerm, setSearchTerm] = useState("")
     const [filter, setFilter] = useState("all") // all, reformer, mat, duo
     const [editingMember, setEditingMember] = useState<any>(null)
@@ -131,13 +133,16 @@ export function MembersTable({ data, onRefresh }: MembersTableProps) {
                         {paginatedData.map((member) => (
                             <TableRow key={member.id} className="hover:bg-slate-50/50">
                                 <TableCell>
-                                    <div className="flex items-center gap-3">
+                                        <div
+                                            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                                            onClick={() => router.push(`/customers/${member.id}`)}
+                                        >
                                         <Avatar className="h-10 w-10 border bg-slate-100 text-slate-500">
                                             <AvatarImage src={member.avatar} />
                                             <AvatarFallback>{member.name.substring(0, 2).toUpperCase()}</AvatarFallback>
                                         </Avatar>
                                         <div>
-                                            <div className="font-semibold text-slate-900">{member.name}</div>
+                                            <div className="font-semibold text-slate-900 hover:text-blue-600 transition-colors">{member.name}</div>
                                             <div className="text-xs text-slate-500">ID: #{member.id.substring(0, 4)}</div>
                                         </div>
                                     </div>

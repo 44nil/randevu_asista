@@ -96,6 +96,153 @@ export async function getCustomersWithStats() {
     return { success: true, data: processed };
 }
 
+export async function upsertTreatmentPlanItem(customerId: string, item: {
+    id?: string
+    title: string
+    tooth?: string
+    status: 'planned' | 'in_progress' | 'completed' | 'cancelled'
+    notes?: string
+}) {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: customer } = await supabase
+        .from('customers')
+        .select('metadata')
+        .eq('id', customerId)
+        .single();
+
+    const existing: any[] = customer?.metadata?.treatment_plans || [];
+    let updated;
+
+    if (item.id) {
+        updated = existing.map((p: any) => p.id === item.id ? { ...p, ...item } : p);
+    } else {
+        updated = [...existing, { ...item, id: crypto.randomUUID(), created_at: new Date().toISOString() }];
+    }
+
+    const { error } = await supabase
+        .from('customers')
+        .update({ metadata: { ...(customer?.metadata || {}), treatment_plans: updated } })
+        .eq('id', customerId);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+}
+
+export async function deleteTreatmentPlanItem(customerId: string, itemId: string) {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: customer } = await supabase
+        .from('customers')
+        .select('metadata')
+        .eq('id', customerId)
+        .single();
+
+    const updated = (customer?.metadata?.treatment_plans || []).filter((p: any) => p.id !== itemId);
+
+    const { error } = await supabase
+        .from('customers')
+        .update({ metadata: { ...(customer?.metadata || {}), treatment_plans: updated } })
+        .eq('id', customerId);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+}
+
+export async function getCustomerDetail(customerId: string) {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: userData } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('clerk_id', userId)
+        .single();
+
+    if (!userData?.organization_id) return { success: false, error: "No organization found" };
+
+    // Müşteri temel bilgisi
+    const { data: customer, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customerId)
+        .eq('organization_id', userData.organization_id)
+        .single();
+
+    if (error || !customer) return { success: false, error: "Müşteri bulunamadı" };
+
+    // Tüm paketler
+    const { data: packages } = await supabase
+        .from('customer_packages')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false });
+
+    // Tüm randevular (geçmiş + gelecek)
+    const { data: appointments } = await supabase
+        .from('appointments')
+        .select(`
+            id, start_time, end_time, status, notes,
+            class_sessions (
+                title, instructor_id,
+                users:instructor_id ( full_name )
+            )
+        `)
+        .eq('customer_id', customerId)
+        .order('start_time', { ascending: false })
+        .limit(50);
+
+    // Ölçümler
+    const { data: measurements } = await supabase
+        .from('measurements')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('date', { ascending: false });
+
+    // İstatistikler
+    const confirmedApts = appointments?.filter(a => a.status === 'confirmed' || a.status === 'completed') || [];
+    const now = new Date();
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonthCount = confirmedApts.filter(a => new Date(a.start_time) >= thisMonthStart).length;
+    const upcomingCount = appointments?.filter(a => new Date(a.start_time) > now && a.status !== 'cancelled').length || 0;
+
+    return {
+        success: true,
+        data: {
+            customer,
+            packages: packages || [],
+            appointments: appointments || [],
+            measurements: measurements || [],
+            stats: {
+                totalSessions: confirmedApts.length,
+                thisMonth: thisMonthCount,
+                upcoming: upcomingCount,
+                memberSince: customer.created_at,
+            }
+        }
+    };
+}
+
 export async function getMemberPageStats() {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
