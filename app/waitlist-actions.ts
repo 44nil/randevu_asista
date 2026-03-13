@@ -177,7 +177,7 @@ export async function promoteFromWaitlist(sessionId: string) {
     // Get user's organization
     const { data: userData } = await supabase
         .from('users')
-        .select('organization_id, id')
+        .select('organization_id')
         .eq('clerk_id', userId)
         .single();
 
@@ -185,7 +185,7 @@ export async function promoteFromWaitlist(sessionId: string) {
         return { success: false, error: "No organization found" };
     }
 
-    // Get first person on waitlist
+    // Waitlist'teki ilk kişiyi al (sıraya göre)
     const { data: waitlistEntry, error: waitlistError } = await supabase
         .from('waitlist')
         .select('id, customer_id')
@@ -198,10 +198,10 @@ export async function promoteFromWaitlist(sessionId: string) {
         return { success: false, error: "No one on waitlist" };
     }
 
-    // Get session details
+    // Seans detayları — instructor_id dahil
     const { data: session } = await supabase
         .from('class_sessions')
-        .select('service_id, start_time, end_time')
+        .select('service_id, start_time, end_time, instructor_id')
         .eq('id', sessionId)
         .single();
 
@@ -209,13 +209,13 @@ export async function promoteFromWaitlist(sessionId: string) {
         return { success: false, error: "Session not found" };
     }
 
-    // Create appointment
+    // Randevu oluştur (staff_id = seansın eğitmeni, admin değil)
     const { error: apptError } = await supabase
         .from('appointments')
         .insert({
             organization_id: userData.organization_id,
             customer_id: waitlistEntry.customer_id,
-            staff_id: userData.id,
+            staff_id: session.instructor_id,
             service_id: session.service_id,
             start_time: session.start_time,
             end_time: session.end_time,
@@ -228,11 +228,48 @@ export async function promoteFromWaitlist(sessionId: string) {
         return { success: false, error: "Failed to create appointment" };
     }
 
-    // Remove from waitlist
+    // Terfi eden müşterinin kredisini düş
+    const { data: pkg } = await supabase
+        .from('customer_packages')
+        .select('id, remaining_credits')
+        .eq('customer_id', waitlistEntry.customer_id)
+        .eq('status', 'active')
+        .gt('remaining_credits', 0)
+        .order('expiry_date', { ascending: true })
+        .limit(1)
+        .single();
+
+    if (pkg) {
+        const newCredits = pkg.remaining_credits - 1;
+        await supabase
+            .from('customer_packages')
+            .update({
+                remaining_credits: newCredits,
+                ...(newCredits <= 0 ? { status: 'completed' } : {}),
+            })
+            .eq('id', pkg.id);
+    }
+
+    // Waitlist'ten sil
     await supabase
         .from('waitlist')
         .delete()
         .eq('id', waitlistEntry.id);
+
+    // Kalan kişilerin sıralarını yeniden düzenle
+    const { data: remaining } = await supabase
+        .from('waitlist')
+        .select('id')
+        .eq('session_id', sessionId)
+        .order('position', { ascending: true });
+
+    if (remaining && remaining.length > 0) {
+        await Promise.all(
+            remaining.map((w, i) =>
+                supabase.from('waitlist').update({ position: i + 1 }).eq('id', w.id)
+            )
+        );
+    }
 
     revalidatePath('/reservations');
     revalidatePath('/program');

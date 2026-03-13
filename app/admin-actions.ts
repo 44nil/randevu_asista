@@ -3,16 +3,12 @@
 
 import { getSession } from "@/app/actions";
 import { revalidatePath } from "next/cache";
+import { supabaseAdmin as supabase } from "@/lib/supabaseAdmin";
+import { promoteFromWaitlist } from "@/app/waitlist-actions";
 
 export async function processCancellation(appointmentId: string, approved: boolean) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
 
     // 1. Get User Role (Security)
     const { data: user } = await supabase.from('users').select('role, organization_id').eq('clerk_id', userId).single();
@@ -20,10 +16,10 @@ export async function processCancellation(appointmentId: string, approved: boole
         return { success: false, error: "Unauthorized" };
     }
 
-    // 2. Get Appointment
+    // 2. Get Appointment — session_id dahil
     const { data: appointment } = await supabase
         .from('appointments')
-        .select('id, customer_id, status')
+        .select('id, customer_id, status, session_id')
         .eq('id', appointmentId)
         .single();
 
@@ -41,17 +37,15 @@ export async function processCancellation(appointmentId: string, approved: boole
         if (updateError) return { success: false, error: "Failed to update status" };
 
         // B. Refund Credit
-        // Find active or completed package for this customer
         const { data: pkg } = await supabase
             .from('customer_packages')
             .select('*')
             .eq('customer_id', appointment.customer_id)
-            .order('created_at', { ascending: false }) // Get most recent
+            .order('created_at', { ascending: false })
             .limit(1)
             .single();
 
         if (pkg) {
-            // Update credits
             const newCredits = pkg.remaining_credits + 1;
             const newStatus = newCredits > 0 ? 'active' : pkg.status;
 
@@ -64,13 +58,18 @@ export async function processCancellation(appointmentId: string, approved: boole
                 .eq('id', pkg.id);
         }
 
+        // C. Waitlist'ten otomatik terfi (grup seans modeli)
+        if (appointment.session_id) {
+            await promoteFromWaitlist(appointment.session_id);
+        }
+
     } else {
         // REJECT: Revert to confirmed
         const { error: updateError } = await supabase
             .from('appointments')
             .update({
                 status: 'confirmed',
-                cancellation_reason: null // Clear reason
+                cancellation_reason: null
             })
             .eq('id', appointmentId);
 
