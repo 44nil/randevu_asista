@@ -51,12 +51,23 @@ export function Sidebar({ role }: { role?: string }) {
     })
 
     const industryLabelMap: Record<string, string> = {
-        'pilates': 'PİLATES STÜDYOSU',
-        'hair': 'KUAFÖR YÖNETİMİ',
-        'dental': 'DİŞ KLİNİĞİ',
-        'general': 'İŞLETME YÖNETİMİ'
+        'pilates':      'PİLATES STÜDYOSU',
+        'yoga':         'YOGA STÜDYOSU',
+        'pt':           'PT / ANTRENÖR',
+        'hair':         'KUAFÖR YÖNETİMİ',
+        'beauty':       'GÜZELLİK MERKEZİ',
+        'dental':       'DİŞ KLİNİĞİ',
+        'physio':       'FİZYOTERAPİ',
+        'dietitian':    'DİYETİSYEN',
+        'psychologist': 'PSİKOLOG',
+        'general':      'İŞLETME YÖNETİMİ',
+        'other':        'İŞLETME YÖNETİMİ',
     }
-    const industryLabel = industryLabelMap[organization?.industry_type || 'general'] || 'YÖNETİM PANELİ'
+    // real_industry (onboarding'den) öncelikli; fallback: DB industry_type
+    const effectiveIndustry = (organization?.settings as { real_industry?: string } | null)?.real_industry
+        || organization?.industry_type
+        || 'general'
+    const industryLabel = industryLabelMap[effectiveIndustry] || 'YÖNETİM PANELİ'
 
     return (
         <div className="w-64 border-r border-r-indigo-900/30 h-screen flex flex-col fixed left-0 top-0 overflow-y-auto z-10 transition-all duration-300" style={{ backgroundColor: '#0F2044' }}>

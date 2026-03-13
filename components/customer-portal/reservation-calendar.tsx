@@ -615,10 +615,6 @@ export function ReservationCalendar() {
                                                             </div>
                                                         )}
                                                     </div>
-                                                        }`}
-                                                    >
-                                                        {format(slotDate, 'HH:mm')}
-                                                    </button>
                                                 )
                                             })}
                                         </div>

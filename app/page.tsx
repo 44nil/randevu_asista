@@ -35,6 +35,15 @@ export default function Home() {
         )
     }
 
+    // Org yoksa onboarding'e gidene kadar boş ekran göster (flash önleme)
+    if (!organization) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-slate-50">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+        )
+    }
+
     // Role Based Rendering
     if (profile?.role === 'customer') {
         return <CustomerDashboard />
