@@ -66,7 +66,7 @@ export function CustomerEditDialog({ customer, open, onOpenChange, onSuccess }: 
                     <TabsContent value="profile" className="mt-4">
                         {formData && (
                             <CustomerForm
-                                industryType={organization?.industry_type as any || "general"}
+                                industryType={((organization?.settings as any)?.real_industry || organization?.industry_type || 'general') as any}
                                 initialData={formData}
                                 onSubmit={handleSubmit}
                             />

@@ -360,7 +360,7 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId, formId = "app
                                     <DialogTitle>Yeni {config.labels.customer} Kaydı</DialogTitle>
                                 </DialogHeader>
                                 <CustomerForm
-                                    industryType={(organization?.industry_type as any) || "general"}
+                                    industryType={((organization?.settings as any)?.real_industry || organization?.industry_type || 'general') as any}
                                     onSuccess={() => { loadCustomers(); setIsCustomerDialogOpen(false) }}
                                 />
                             </DialogContent>

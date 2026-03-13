@@ -73,7 +73,7 @@ const customerFormSchema = z.discriminatedUnion("industry_type", [
 type CustomerFormValues = z.infer<typeof customerFormSchema>
 
 export interface CustomerFormProps {
-    industryType: "pilates" | "dental" | "hair" | "general"
+    industryType: "pilates" | "yoga" | "pt" | "dental" | "physio" | "dietitian" | "psychologist" | "hair" | "beauty" | "general" | "other"
     initialData?: any
     onSubmit?: (data: CustomerFormValues) => void
     onSuccess?: () => void
@@ -227,8 +227,7 @@ export function CustomerForm({ industryType, initialData, onSubmit, onSuccess }:
                     </div>
                 )}
 
-                {industryType === "hair" && (
-                    <div className="border p-4 rounded-md space-y-4">
+                {industryType === "hair" && (                    <div className="border p-4 rounded-md space-y-4">
                         <h3 className="font-semibold text-sm text-muted-foreground">Saç Bilgileri</h3>
                         <FormField
                             control={form.control}

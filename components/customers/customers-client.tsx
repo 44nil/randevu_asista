@@ -72,7 +72,7 @@ export function CustomersClient({ role, initialMembers, initialStats }: Customer
                                 </DialogDescription>
                             </DialogHeader>
                             <CustomerForm
-                                industryType={(organization?.industry_type || 'general') as any}
+                                industryType={((organization?.settings as any)?.real_industry || organization?.industry_type || 'general') as any}
                                 onSuccess={() => {
                                     setOpen(false)
                                     loadData()

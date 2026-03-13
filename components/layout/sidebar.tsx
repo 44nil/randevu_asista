@@ -30,11 +30,27 @@ export function Sidebar({ role }: { role?: string }) {
     // Fallback to prop if provided, otherwise use the context user role
     const activeRole = role || dbUser?.role || 'staff'
 
+    // Türkçe çoğul: ünlü uyumu + bileşik isim desteği
+    // "Müşteri"→"Müşteriler", "Hasta"→"Hastalar", "Bakım Paketi"→"Bakım Paketleri"
+    const toPlural = (word: string, fallback: string): string => {
+        if (!word) return fallback
+        const parts = word.split(' ')
+        const lastWord = parts[parts.length - 1]
+        const lastVowel = word.match(/[aeıiouöü]/gi)?.pop()?.toLowerCase() ?? 'e'
+        const suffix = ['a', 'ı', 'o', 'u'].includes(lastVowel) ? 'lar' : 'ler'
+        // Bileşik isim iyelik eki ile bitiyorsa: "Bakım Paketi" → "Bakım Paketleri"
+        if (parts.length > 1 && /[iıuü]$/.test(lastWord)) {
+            parts[parts.length - 1] = lastWord.slice(0, -1) + suffix + 'i'
+            return parts.join(' ')
+        }
+        return word + suffix
+    }
+
     const sidebarItems = [
         { icon: LayoutDashboard, label: "Dashboard", href: "/" },
         { icon: Calendar, label: config.labels.program, href: "/program" },
-        { icon: Users, label: config.labels.customer ? `${config.labels.customer}ler` : "Müşteriler", href: "/customers" },
-        { icon: Package, label: config.labels.package ? `${config.labels.package}ler` : "Paketler", href: "/packages" },
+        { icon: Users, label: toPlural(config.labels.customer, "Müşteriler"), href: "/customers" },
+        { icon: Package, label: toPlural(config.labels.package, "Paketler"), href: "/packages" },
         { icon: BarChart3, label: "Raporlar", href: "/reports" },
         { icon: Settings, label: "Ayarlar", href: "/settings" },
     ]
