@@ -17,12 +17,15 @@ import {
 } from "lucide-react"
 import { UserButton, useUser } from "@clerk/nextjs"
 import { useOrganization } from "@/providers/organization-provider"
+import { useState, useEffect } from "react"
 
 
 export function Sidebar({ role }: { role?: string }) {
     const pathname = usePathname()
     const { user } = useUser()
     const { config, organization, user: dbUser } = useOrganization()
+    const [mounted, setMounted] = useState(false)
+    useEffect(() => { setMounted(true) }, [])
 
     // Fallback to prop if provided, otherwise use the context user role
     const activeRole = role || dbUser?.role || 'staff'
@@ -101,14 +104,18 @@ export function Sidebar({ role }: { role?: string }) {
 
             {/* Profile */}
             <div className="p-4 border-t border-white/10 flex items-center gap-3">
-                <UserButton afterSignOutUrl="/sign-in" />
+                {mounted && <UserButton afterSignOutUrl="/sign-in" />}
                 <div className="flex-1 overflow-hidden">
-                    <p className="text-sm font-medium text-white truncate">
-                        {user?.fullName || "Kullanıcı"}
-                    </p>
-                    <p className="text-xs text-slate-400 truncate capitalize">
-                        {activeRole === 'owner' ? 'Kurucu' : activeRole === 'admin' ? 'Yönetici' : config.labels.instructor}
-                    </p>
+                    {mounted && (
+                        <>
+                            <p className="text-sm font-medium text-white truncate">
+                                {user?.fullName || "Kullanıcı"}
+                            </p>
+                            <p className="text-xs text-slate-400 truncate capitalize">
+                                {activeRole === 'owner' ? 'Kurucu' : activeRole === 'admin' ? 'Yönetici' : config.labels.instructor}
+                            </p>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

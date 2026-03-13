@@ -73,7 +73,7 @@ export function EditAppointmentDialog({ open, onOpenChange, appointment, onSucce
     const lunchEndMins = lunchEndH * 60 + lunchEndM
 
     const timeSlots = []
-    for (let h = 8; h <= 20; h++) {
+    for (let h = 8; h < 24; h++) {
         for (const m of [0, 30]) {
             const totalMins = h * 60 + m
             const isLunch = lunchEnabled && totalMins >= lunchStartMins && totalMins < lunchEndMins

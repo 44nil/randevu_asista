@@ -82,7 +82,9 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId, formId = "app
             type: config.appointmentTypes?.[0]?.value || "standard",
             max_attendees: "1",
             appointment_date: defaultDate || new Date(),
-            time: "09:00",
+            time: defaultDate
+                ? `${defaultDate.getHours().toString().padStart(2, '0')}:${defaultDate.getMinutes().toString().padStart(2, '0')}`
+                : "09:00",
             customer_ids: [],
             instructor_id: staffId || "",
             is_recurring: false,
@@ -132,7 +134,7 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId, formId = "app
         const lunchEndMins = lunchEndH * 60 + lunchEndM
 
         const times: { value: string; isLunch: boolean }[] = []
-        for (let h = 8; h <= 20; h++) {
+        for (let h = 8; h < 24; h++) {
             for (const m of [0, 30]) {
                 const totalMins = h * 60 + m
                 const isLunch = lunchEnabled && totalMins >= lunchStartMins && totalMins < lunchEndMins

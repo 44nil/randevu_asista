@@ -55,7 +55,7 @@ export default async function RootLayout({
             />
             {children}
           </OrganizationProvider>
-          <Toaster />
+          <Toaster position="top-right" richColors />
         </body>
       </html>
     </ClerkProvider>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -41,18 +41,22 @@ const TIME_OPTIONS = generateTimeOptions()
 export function WorkingHours({ settings }: WorkingHoursProps) {
     const [loading, setLoading] = useState(false)
 
-    // Initialize with fallbacks
-    const [schedule, setSchedule] = useState<any>(() => {
+    const buildSchedule = (wh: any) => {
         const base = DAYS.reduce((acc: any, day) => {
             acc[day.key] = { isOpen: true, open: "09:00", close: "18:00" }
             return acc
         }, {})
+        return { ...base, ...(wh || {}) }
+    }
 
-        return {
-            ...base,
-            ...(settings?.working_hours || {})
+    const [schedule, setSchedule] = useState<any>(() => buildSchedule(settings?.working_hours))
+
+    // settings prop ilk render'da null geliyor, gerçek veri sonradan yükleniyor
+    useEffect(() => {
+        if (settings?.working_hours) {
+            setSchedule(buildSchedule(settings.working_hours))
         }
-    })
+    }, [settings])
 
     const handleToggle = (day: string, isOpen: boolean) => {
         setSchedule((prev: any) => ({

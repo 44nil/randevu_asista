@@ -13,9 +13,10 @@ import { useOrganization } from "@/providers/organization-provider"
 interface ProgramClientProps {
     role?: string
     staffId?: string  // Supabase users.id (UUID)
+    initialWorkingHours?: Record<string, { isOpen: boolean; open: string; close: string }> | null
 }
 
-export function ProgramClient({ role, staffId }: ProgramClientProps) {
+export function ProgramClient({ role, staffId, initialWorkingHours }: ProgramClientProps) {
     const { config } = useOrganization()
     const [open, setOpen] = useState(false)
 
@@ -64,7 +65,7 @@ export function ProgramClient({ role, staffId }: ProgramClientProps) {
                 </Dialog>
             }
         >
-            <WeeklyCalendar />
+            <WeeklyCalendar initialWorkingHours={initialWorkingHours} />
         </DashboardLayout >
     )
 }

@@ -33,6 +33,10 @@ import { EditAppointmentDialog } from "@/components/appointments/edit-appointmen
 import { useSession } from "@clerk/nextjs"
 import { getStaffList } from "@/app/staff-actions"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toast } from "sonner"
+
+// Bileşen dışında sabit — her render'da yeniden oluşturulmaz
+const EN_DAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'] as const
 
 type ClassType = 'reformer' | 'mat' | 'private'
 
@@ -50,7 +54,7 @@ interface Appointment {
     rawAppointments?: any[]
 }
 
-export function WeeklyCalendar() {
+export function WeeklyCalendar({ initialWorkingHours }: { initialWorkingHours?: Record<string, { isOpen: boolean; open: string; close: string }> | null }) {
     const { config, organization } = useOrganization()
     const { session } = useSession()
     const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
@@ -69,6 +73,49 @@ export function WeeklyCalendar() {
     const [selectedStaffId, setSelectedStaffId] = useState<string>("all")
     const [mounted, setMounted] = useState(false)
     const [refreshKey, setRefreshKey] = useState(0)
+    const [newApptOpen, setNewApptOpen] = useState(false)
+    const [newApptDate, setNewApptDate] = useState<Date | null>(null)
+    const [liveWorkingHours, setLiveWorkingHours] = useState<Record<string, { isOpen: boolean; open: string; close: string }> | null>(initialWorkingHours ?? null)
+
+    const openNewAppt = (day: Date, hour: number) => {
+        const dayKey = EN_DAYS[day.getDay()]
+        const dayConfig = workingHours?.[dayKey]
+        const dayOpen = dayConfig?.isOpen !== false
+        const dayOpenH = parseInt(dayConfig?.open?.split(':')[0] ?? String(calStart))
+        const dayCloseH = parseInt(dayConfig?.close?.split(':')[0] ?? String(calEnd))
+        const isOutside = !dayOpen || hour < dayOpenH || hour >= dayCloseH
+        if (isOutside) {
+            const dayName = format(day, 'EEEE', { locale: tr })
+            const reason = !dayOpen
+                ? `${dayName} günü işletme kapalı`
+                : `Çalışma saatleri ${dayConfig?.open ?? '?'}–${dayConfig?.close ?? '?'}`
+            toast.warning('⚠️ Çalışma saati dışında', {
+                description: `${reason}. Yine de randevu oluşturmak istiyor musunuz?`,
+                duration: 8000,
+                style: {
+                    background: '#1e293b',
+                    color: '#f8fafc',
+                    border: '1px solid #f59e0b',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                },
+                action: {
+                    label: 'Evet, oluştur',
+                    onClick: () => {
+                        const d = new Date(day)
+                        d.setHours(hour, 0, 0, 0)
+                        setNewApptDate(d)
+                        setNewApptOpen(true)
+                    }
+                }
+            })
+            return
+        }
+        const d = new Date(day)
+        d.setHours(hour, 0, 0, 0)
+        setNewApptDate(d)
+        setNewApptOpen(true)
+    }
 
     useEffect(() => {
         setMounted(true)
@@ -76,7 +123,15 @@ export function WeeklyCalendar() {
 
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
     const weekEnd = addDays(weekStart, 6)
-    const timeSlots = Array.from({ length: 14 }, (_, i) => i + 8) // 08:00 - 21:00
+
+    // Çalışma saatlerine göre dinamik saat aralığı — DB'den canlı çekilir, provider'a bağımlı değil
+    const workingHours = (liveWorkingHours ?? organization?.settings?.working_hours) as Record<string, { isOpen: boolean; open: string; close: string }> | undefined
+    const allOpenTimes = workingHours
+        ? Object.values(workingHours).filter(d => d.isOpen).map(d => parseInt(d.open?.split(':')[0] ?? '9'))
+        : []
+    const calStart = allOpenTimes.length > 0 ? Math.min(...allOpenTimes) : 8
+    const calEnd = 24 // Her zaman 24:00'e kadar göster; gri hücreler çalışma saati dışını işaretler
+    const timeSlots = Array.from({ length: calEnd - calStart }, (_, i) => i + calStart)
 
     useEffect(() => {
         const fetchStaff = async () => {
@@ -231,7 +286,7 @@ export function WeeklyCalendar() {
                                     hideSubmit
                                     staffId={session?.user?.id}
                                     onSuccess={() => {
-                                        window.location.reload()
+                                          setRefreshKey(k => k + 1)
                                     }}
                                 />
                             </div>
@@ -306,11 +361,24 @@ export function WeeklyCalendar() {
 
                         return (
                         <div key={hour} className={cn("grid grid-cols-8 min-h-[95px] border-b border-border-brand/40 last:border-b-0", isLunchHour && "min-h-[60px]")}>
-                            <div className={cn("p-2 border-r border-border-brand/40 text-[12px] font-bold text-center pt-5 sticky left-0 backdrop-blur-sm z-20", isLunchHour ? "text-orange-400 bg-orange-50/80" : "text-t3 bg-white/95")}>
-                                {`${hour.toString().padStart(2, '0')}:00`}
-                            </div>
+                            {(() => {
+                                return (
+                                    <div className={cn("p-2 border-r border-border-brand/40 text-[12px] font-bold text-center pt-5 sticky left-0 backdrop-blur-sm z-20",
+                                        isLunchHour ? "text-orange-400 bg-orange-50/80" : "text-t3 bg-white/95")}>
+                                        {`${hour.toString().padStart(2, '0')}:00`}
+                                    </div>
+                                )
+                            })()}
                             {weekDays.map((day, dayIndex) => {
                                 const activeSlotAppointments = getAppointmentsForSlot(day, hour)
+
+                                // O günün çalışma saati dışında mı? (EN_DAYS bileşen dışında sabit)
+                                const dayKey = EN_DAYS[day.getDay()]
+                                const dayConfig = workingHours?.[dayKey]
+                                const dayOpen = dayConfig?.isOpen !== false
+                                const dayOpenH = parseInt(dayConfig?.open?.split(':')[0] ?? String(calStart))
+                                const dayCloseH = parseInt(dayConfig?.close?.split(':')[0] ?? String(calEnd))
+                                const isOutsideHours = !dayOpen || hour < dayOpenH || hour >= dayCloseH
                                 if (isLunchHour) {
                                     return (
                                         <div key={dayIndex} className="relative border-r border-border-brand/40 last:border-r-0 overflow-hidden"
@@ -324,8 +392,32 @@ export function WeeklyCalendar() {
                                         </div>
                                     )
                                 }
+                                if (isOutsideHours) {
+                                    return (
+                                        <div key={dayIndex}
+                                            className="relative border-r border-border-brand/40 last:border-r-0 h-full cursor-pointer group"
+                                            style={{ background: 'repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(0,0,0,0.04) 6px, rgba(0,0,0,0.04) 12px)', backgroundColor: 'rgba(241,245,249,0.7)' }}
+                                            onClick={() => openNewAppt(day, hour)}
+                                        >
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                <div className="h-7 w-7 rounded-full bg-orange-100 border border-orange-300 flex items-center justify-center">
+                                                    <Plus className="h-3.5 w-3.5 text-orange-500" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                }
                                 return (
-                                    <div key={dayIndex} className="relative p-1.5 border-r border-border-brand/40 last:border-r-0 hover:bg-bg/20 transition-colors group h-full bg-white">
+                                      <div key={dayIndex} className="relative p-1.5 border-r border-border-brand/40 last:border-r-0 hover:bg-bg/20 transition-colors group h-full bg-white"
+                                          onClick={() => { if (activeSlotAppointments.length === 0) openNewAppt(day, hour) }}
+                                      >
+                                          {activeSlotAppointments.length === 0 && (
+                                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                  <div className="h-7 w-7 rounded-full bg-electric/10 border border-electric/30 flex items-center justify-center">
+                                                      <Plus className="h-3.5 w-3.5 text-electric" />
+                                                  </div>
+                                              </div>
+                                          )}
                                         {activeSlotAppointments.map(apt => (
                                             <div key={apt.id}
                                                 className={cn(
@@ -386,7 +478,43 @@ export function WeeklyCalendar() {
                 </div>
             </div>
 
-
+              {/* Hücre Tıklama — Hızlı Randevu Dialogu */}
+              <Dialog open={newApptOpen} onOpenChange={setNewApptOpen}>
+                  <DialogContent
+                      className="max-w-3xl border-none bg-white p-0"
+                      style={{ display: 'flex', flexDirection: 'column', maxHeight: '92vh' }}
+                  >
+                      <div className="px-6 pt-6 pb-3 border-b border-slate-100 shrink-0">
+                          <DialogHeader>
+                              <DialogTitle className="text-lg font-black text-navy uppercase tracking-tight">Yeni {config.labels.appointment}</DialogTitle>
+                          </DialogHeader>
+                      </div>
+                      <div className="flex-1 overflow-y-auto min-h-0">
+                          {newApptDate && (
+                              <AppointmentForm
+                                  key={newApptDate.toISOString()}
+                                  formId="slot-apt-form"
+                                  hideSubmit
+                                  defaultDate={newApptDate}
+                                  staffId={selectedStaffId !== 'all' ? selectedStaffId : undefined}
+                                  onSuccess={() => {
+                                      setNewApptOpen(false)
+                                      setRefreshKey(k => k + 1)
+                                  }}
+                              />
+                          )}
+                      </div>
+                      <div className="px-6 py-4 border-t border-slate-200 bg-white shrink-0">
+                          <button
+                              type="submit"
+                              form="slot-apt-form"
+                              style={{ background: '#2E66F1', color: '#fff', width: '100%', height: '56px', borderRadius: '12px', fontWeight: 900, fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}
+                          >
+                              {config.labels.appointment.toUpperCase()} OLUŞTUR
+                          </button>
+                      </div>
+                  </DialogContent>
+              </Dialog>
             {/* Stats/Summary Footer */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="bg-white p-7 rounded-card border-none shadow-brand flex items-center gap-6 transition-all hover:shadow-elevated">
@@ -399,14 +527,14 @@ export function WeeklyCalendar() {
                     </div>
                 </div>
 
-                <div className="bg-navy p-7 rounded-card border-none shadow-brand flex items-center gap-6 transition-all hover:scale-[1.02]">
-                    <div className="size-16 rounded-[14px] bg-navy-mid flex items-center justify-center text-accent">
-                        <CheckCircle className="h-8 w-8" />
-                    </div>
-                    <div>
-                        <p className="text-[11px] font-bold text-t3 uppercase tracking-wider leading-none mb-1.5">Tamamlanan Randevular</p>
-                        <p className="text-3xl font-extrabold text-white tracking-tighter">
-                            {stats.completedClasses} <span className="text-sm text-t3 font-normal">/ {stats.totalClasses}</span>
+<div className="p-7 rounded-card border-none shadow-brand flex items-center gap-6 transition-all hover:scale-[1.02]" style={{ background: '#0F2044' }}>
+                      <div className="size-16 rounded-[14px] flex items-center justify-center" style={{ background: '#1A3360', color: '#60A5FA' }}>
+                          <CheckCircle className="h-8 w-8" />
+                      </div>
+                      <div>
+                          <p className="text-[11px] font-bold uppercase tracking-wider leading-none mb-1.5" style={{ color: '#94A3B8' }}>Tamamlanan Randevular</p>
+                          <p className="text-3xl font-extrabold tracking-tighter" style={{ color: '#ffffff' }}>
+                              {stats.completedClasses} <span className="text-sm font-normal" style={{ color: '#64748B' }}>/ {stats.totalClasses}</span>
                         </p>
                     </div>
                 </div>

@@ -99,7 +99,7 @@ export default function SettingsPage() {
                 </TabsContent>
 
                 <TabsContent value="hours" className="space-y-6">
-                    <WorkingHours settings={settings?.settings} />
+                    <WorkingHours settings={settings?.organization?.settings} />
                 </TabsContent>
 
                 <TabsContent value="lunch" className="space-y-6">
@@ -124,13 +124,13 @@ export default function SettingsPage() {
 
                 <TabsContent value="policy" className="space-y-6 flex flex-col gap-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <CancelPolicy settings={settings?.settings} />
+                        <CancelPolicy settings={settings?.organization?.settings} />
                         {/* Other policy widgets could go here */}
                     </div>
                 </TabsContent>
 
                 <TabsContent value="notifications" className="space-y-6">
-                    <NotificationSettings settings={settings?.settings} />
+                    <NotificationSettings settings={settings?.organization?.settings} />
                 </TabsContent>
 
                 <TabsContent value="profile" className="space-y-6">

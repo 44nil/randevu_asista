@@ -1,10 +1,14 @@
 import { ProgramClient } from "@/components/program/program-client"
 import { getUserProfile } from "@/app/actions"
+import { getWorkingHours } from "@/app/settings/actions"
+
+export const dynamic = 'force-dynamic'
 
 export default async function ProgramPage() {
-    const profile = await getUserProfile()
-    const role = profile?.role
-    const staffId = profile?.id  // Supabase UUID (clerk_id değil)
+    const [profile, workingHours] = await Promise.all([
+        getUserProfile(),
+        getWorkingHours()
+    ])
 
-    return <ProgramClient role={role} staffId={staffId} />
+    return <ProgramClient role={profile?.role} staffId={profile?.id} initialWorkingHours={workingHours} />
 }
