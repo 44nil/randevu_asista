@@ -1,16 +1,11 @@
 "use server"
 
 import { getSession } from "./actions"
+import { supabaseAdmin as supabase } from "@/lib/supabaseAdmin"
 
 export async function getCustomerDashboardData() {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
 
     // 1. Get User Role & Organization
     const { data: user, error: userError } = await supabase
@@ -132,12 +127,6 @@ export async function getAvailableClasses(startDate: string, endDate: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
     const { data: userData } = await supabase
         .from('users')
         .select('organization_id, email')
@@ -233,12 +222,6 @@ export async function bookAppointment(
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
     // 1. Get User/Customer
     const { data: user } = await supabase.from('users').select('organization_id, email, full_name').eq('clerk_id', userId).single();
     if (!user) return { success: false, error: "User not found" };
@@ -282,6 +265,21 @@ export async function bookAppointment(
             if ((count || 0) >= sessionData.capacity) {
                 return { success: false, error: "Kontenjan dolu, başka bir zaman seçiniz." };
             }
+        }
+    }
+
+    // 2b. LOGIC: Slot conflict check (diş / kuaför modu — session_id yok)
+    if (!classDetails.session_id && classDetails.staff_id) {
+        const { count: conflictCount } = await supabase
+            .from('appointments')
+            .select('id', { count: 'exact', head: true })
+            .eq('staff_id', classDetails.staff_id)
+            .neq('status', 'cancelled')
+            .lt('start_time', classDetails.end_time)
+            .gt('end_time', classDetails.start_time);
+
+        if ((conflictCount || 0) > 0) {
+            return { success: false, error: "Bu saat diliminde başka bir randevu mevcut." };
         }
     }
 
@@ -353,12 +351,6 @@ export async function getCustomerHistory() {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
     // Get User & Customer ID
     const { data: user } = await supabase.from('users').select('organization_id, email').eq('clerk_id', userId).single();
     if (!user) return { success: false, error: "User not found" };
@@ -426,12 +418,6 @@ export async function getStaffAndServices() {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
     const { data: user } = await supabase
         .from('users').select('organization_id').eq('clerk_id', userId).single();
     if (!user) return { success: false, error: "Unauthorized" };
@@ -464,12 +450,6 @@ export async function getAvailableSlots(
 ) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
 
     const { data: user } = await supabase
         .from('users').select('organization_id').eq('clerk_id', userId).single();
@@ -626,12 +606,6 @@ export async function getAvailableSlots(
 export async function requestCancellation(appointmentId: string, reason: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
 
     // 1. Get Customer ID to verify ownership
     const { data: user } = await supabase.from('users').select('organization_id, email').eq('clerk_id', userId).single();

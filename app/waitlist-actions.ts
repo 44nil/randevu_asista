@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { getSession } from "./actions"
+import { supabaseAdmin as supabase } from "@/lib/supabaseAdmin"
 
 // ============================================================================
 // WAITLIST & CAPACITY MANAGEMENT
@@ -13,13 +14,6 @@ import { getSession } from "./actions"
 export async function checkSessionCapacity(sessionId: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
 
     // Get session capacity
     const { data: session, error: sessionError } = await supabase
@@ -64,13 +58,6 @@ export async function checkSessionCapacity(sessionId: string) {
 export async function addToWaitlist(sessionId: string, customerId: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
 
     // Get user's organization
     const { data: userData } = await supabase
@@ -133,13 +120,6 @@ export async function removeFromWaitlist(waitlistId: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
-
     const { error } = await supabase
         .from('waitlist')
         .delete()
@@ -160,13 +140,6 @@ export async function removeFromWaitlist(waitlistId: string) {
 export async function getWaitlist(sessionId: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
 
     const { data, error } = await supabase
         .from('waitlist')
@@ -200,13 +173,6 @@ export async function getWaitlist(sessionId: string) {
 export async function promoteFromWaitlist(sessionId: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
 
     // Get user's organization
     const { data: userData } = await supabase
