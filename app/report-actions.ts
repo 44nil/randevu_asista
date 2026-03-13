@@ -58,7 +58,7 @@ export async function getRevenueStats(period: 'month' | 'year' = 'month') {
     };
 }
 
-export async function getAppointmentStats() {
+export async function getAppointmentStats(period: 'month' | '3months' | 'year' = 'month') {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
@@ -77,7 +77,8 @@ export async function getAppointmentStats() {
     if (!user) return { success: false, error: "No org" };
 
     const now = new Date();
-    const startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const monthCount = period === 'year' ? 12 : period === '3months' ? 3 : 6;
+    const startDate = new Date(now.getFullYear(), now.getMonth() - (monthCount - 1), 1);
 
     const { data: appointments, error } = await supabase
         .from('appointments')
@@ -89,7 +90,7 @@ export async function getAppointmentStats() {
     if (error) return { success: false, error: error.message };
 
     const chartData: { name: string; completed: number; cancelled: number; month: number; year: number }[] = [];
-    for (let i = 5; i >= 0; i--) {
+    for (let i = monthCount - 1; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         chartData.push({
             name: d.toLocaleString('tr-TR', { month: 'short' }),
@@ -160,6 +161,80 @@ export async function getInstructorStats() {
         success: true,
         data: Object.values(stats).sort((a, b) => b.classes - a.classes)
     };
+}
+
+export async function getCustomerStats() {
+    const { userId } = await getSession();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: user } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('clerk_id', userId)
+        .single();
+
+    if (!user) return { success: false, error: "No org" };
+
+    const orgId = user.organization_id;
+
+    // En çok randevusu olan müşteriler
+    const { data: apts } = await supabase
+        .from('appointments')
+        .select('customer_id, status, customers(name)')
+        .eq('organization_id', orgId)
+        .not('customer_id', 'is', null)
+
+    const { data: packages } = await supabase
+        .from('customer_packages')
+        .select('customer_id, price_paid, remaining_sessions, total_sessions, customers(name)')
+        .eq('organization_id', orgId)
+
+    // Müşteri başına istatistik
+    const map: Record<string, { name: string; total: number; completed: number; cancelled: number; revenue: number; lastVisit: string | null }> = {}
+
+    apts?.forEach((a: any) => {
+        const cid = a.customer_id
+        const name = Array.isArray(a.customers) ? a.customers[0]?.name : a.customers?.name
+        if (!cid || !name) return
+        if (!map[cid]) map[cid] = { name, total: 0, completed: 0, cancelled: 0, revenue: 0, lastVisit: null }
+        map[cid].total++
+        if (a.status === 'completed') map[cid].completed++
+        if (a.status === 'cancelled') map[cid].cancelled++
+    })
+
+    packages?.forEach((p: any) => {
+        const cid = p.customer_id
+        const name = Array.isArray(p.customers) ? p.customers[0]?.name : p.customers?.name
+        if (!cid) return
+        if (!map[cid]) map[cid] = { name: name || '?', total: 0, completed: 0, cancelled: 0, revenue: 0, lastVisit: null }
+        map[cid].revenue += Number(p.price_paid) || 0
+    })
+
+    const sorted = Object.values(map).sort((a, b) => b.completed - a.completed).slice(0, 20)
+
+    // Churn riski: 30+ gün randevu almamış
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    const { data: recentApts } = await supabase
+        .from('appointments')
+        .select('customer_id')
+        .eq('organization_id', orgId)
+        .gte('start_time', thirtyDaysAgo)
+    const activeCustomerIds = new Set((recentApts || []).map((a: any) => a.customer_id))
+
+    const churnRisk = Object.entries(map)
+        .filter(([id]) => !activeCustomerIds.has(id))
+        .map(([, v]) => v)
+        .filter(v => v.completed > 0)
+        .sort((a, b) => b.completed - a.completed)
+        .slice(0, 10)
+
+    return { success: true, data: { topCustomers: sorted, churnRisk } }
 }
 
 export async function getOverallStats() {
