@@ -418,14 +418,20 @@ export function WeeklyCalendar({ initialWorkingHours }: { initialWorkingHours?: 
                                                   </div>
                                               </div>
                                           )}
-                                        {activeSlotAppointments.map(apt => (
+                                        {activeSlotAppointments.map((apt, aptIdx) => {
+                                            const total = activeSlotAppointments.length
+                                            const widthPct = total === 1 ? 92 : Math.floor(90 / total)
+                                            const leftPct = total === 1 ? 4 : 4 + aptIdx * (widthPct + 1)
+                                            return (
                                             <div key={apt.id}
                                                 className={cn(
-                                                    "absolute w-[92%] left-[4%] py-2.5 px-3 rounded-r-[14px] cursor-pointer hover:shadow-elevated transition-all duration-300 z-10 overflow-hidden flex flex-col border-l-[6px] shadow-brand"
+                                                    "absolute py-2.5 px-3 rounded-r-[14px] cursor-pointer hover:shadow-elevated transition-all duration-300 z-10 overflow-hidden flex flex-col border-l-[6px] shadow-brand"
                                                 )}
                                                 style={{
                                                     top: '3px',
                                                     height: 'calc(100% - 6px)',
+                                                    width: `${widthPct}%`,
+                                                    left: `${leftPct}%`,
                                                     backgroundColor: categoryColors[apt.type]?.bg || categoryColors.reformer.bg,
                                                     borderLeftColor: categoryColors[apt.type]?.border || categoryColors.reformer.border
                                                 }}
@@ -468,7 +474,8 @@ export function WeeklyCalendar({ initialWorkingHours }: { initialWorkingHours?: 
                                                     </div>
                                                 </div>
                                             </div>
-                                        ))}
+                                            )
+                                        })}
                                     </div>
                                 )
                             })}

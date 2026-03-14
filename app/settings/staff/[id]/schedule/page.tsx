@@ -58,7 +58,6 @@ export default async function StaffSchedulePage({ params }: { params: Promise<{ 
                 start_time: dbDay.start_time.substring(0, 5),
                 end_time: dbDay.end_time.substring(0, 5),
                 is_working_day: dbDay.is_working_day,
-                breaks: dbDay.breaks || [] // Include breaks data
             };
         }
         return { ...defaultDay, breaks: [] };

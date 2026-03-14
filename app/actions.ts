@@ -340,7 +340,6 @@ export async function updateStaffSchedule(staffId: string, schedules: any[]) {
         start_time: schedule.start_time,
         end_time: schedule.end_time,
         is_working_day: schedule.is_working_day,
-        breaks: schedule.breaks || [] // Include breaks data
     }));
 
     // Perform upsert (using the unique constraint on user_id + day_of_week)

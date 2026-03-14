@@ -129,12 +129,18 @@ export function ScheduleEditor({ staffId, initialSchedules }: { staffId: string,
                                     <Switch
                                         checked={schedule.is_working_day}
                                         onCheckedChange={(checked) => updateDay(day.id, { is_working_day: checked })}
-                                        className="data-[state=checked]:bg-electric"
+                                        className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-slate-300 scale-125"
                                     />
                                 </div>
                             </div>
                         );
                     })}
+                </div>
+                <div className="flex justify-end p-6 border-t border-slate-100">
+                    <Button onClick={handleSave} disabled={isSaving} className="h-12 px-8 bg-slate-900 text-white rounded-xl font-black text-sm gap-2 uppercase tracking-widest hover:bg-blue-600 transition-all">
+                        {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+                        Değişiklikleri Kaydet
+                    </Button>
                 </div>
             </div>
 
