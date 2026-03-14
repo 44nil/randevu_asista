@@ -1,16 +1,13 @@
 "use server"
 
 import { getSession } from "./actions"
+import { supabaseAdmin } from "@/lib/supabaseAdmin"
 
 export async function getDashboardStats() {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = supabaseAdmin;
 
     const { data: userData } = await supabase
         .from('users')
@@ -42,10 +39,14 @@ export async function getDashboardStats() {
             .select('*', { count: 'exact', head: true })
             .eq('organization_id', orgId),
 
-        // 2. Bugünkü randevular (takvim widgeti için)
+        // 2. Bugünkü randevular — class_sessions üzerinden hekim + hizmet bilgisiyle
         supabase
-            .from('appointments')
-            .select(`id, start_time, end_time, status, customer:customers(name)`)
+            .from('class_sessions')
+            .select(`
+                id, start_time, end_time, service_id,
+                staff:instructor_id(full_name),
+                appointments(id, status, customer:customers(name))
+            `)
             .eq('organization_id', orgId)
             .gte('start_time', today)
             .lt('start_time', tomorrow)
@@ -97,16 +98,39 @@ export async function getDashboardStats() {
         (sum, pkg) => sum + (Number(pkg.price_paid) || 0), 0
     ) || 0;
 
+    // class_sessions verisini DailySchedule'ın beklediği formata dönüştür
+    const dailySchedule = (todaysAppointments.data || []).flatMap((session: any) => {
+        const apts = session.appointments || []
+        if (apts.length === 0) return [{
+            id: session.id,
+            start_time: session.start_time,
+            end_time: session.end_time,
+            service_id: session.service_id,
+            status: 'confirmed',
+            staff_name: session.staff?.full_name || null,
+            customer: null,
+        }]
+        return apts.map((apt: any) => ({
+            id: apt.id,
+            start_time: session.start_time,
+            end_time: session.end_time,
+            service_id: session.service_id,
+            status: apt.status,
+            staff_name: session.staff?.full_name || null,
+            customer: apt.customer,
+        }))
+    })
+
     return {
         success: true,
         data: {
             stats: {
                 totalMembers: membersCount.count || 0,
-                todayAttendance: todaysAppointments.data?.length || 0,
+                todayAttendance: dailySchedule.filter((a: any) => a.status !== 'cancelled').length,
                 monthlyRevenue: totalRevenue,
                 activePackages: activePackagesCount.count || 0,
             },
-            dailySchedule: todaysAppointments.data || [],
+            dailySchedule,
             recentSales: recentSales.data || [],
             upcomingReminders: upcomingAppointments.data || [],
             cancellationRequests: cancelledToday.data || [],

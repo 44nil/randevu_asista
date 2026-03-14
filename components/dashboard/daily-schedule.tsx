@@ -108,7 +108,8 @@ export function DailySchedule({ data }: DailyScheduleProps) {
                                             : item.groupedCustomers.join(", ")}
                                     </h4>
                                     <p className="text-sm text-slate-500">
-                                        {config.appointmentTypes?.find((t: any) => t.value === item.service_id)?.label || item.service_id || config.labels.appointment} • {isGroup ? 'Grup' : 'Özel'} {config.labels.session}
+                                        {config.appointmentTypes?.find((t: any) => t.value === item.service_id)?.label || item.service_id || config.labels.appointment}
+                                        {item.staff_name && <> • {item.staff_name}</>}
                                     </p>
                                 </div>
 
