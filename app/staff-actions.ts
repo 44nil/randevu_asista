@@ -2,16 +2,13 @@
 
 import { getSession } from "./actions"
 import { revalidatePath } from "next/cache"
+import { supabaseAdmin } from "@/lib/supabaseAdmin"
 
 export async function getStaffList() {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = supabaseAdmin;
 
     const { data: user } = await supabase.from('users').select('organization_id').eq('clerk_id', userId).single();
     if (!user) return { success: false, error: "No org" };
@@ -32,11 +29,7 @@ export async function createStaff(data: { full_name: string, email: string, phon
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = supabaseAdmin;
 
     const { data: user } = await supabase.from('users').select('organization_id').eq('clerk_id', userId).single();
     if (!user) return { success: false, error: "User not found" };
@@ -67,6 +60,17 @@ export async function createStaff(data: { full_name: string, email: string, phon
         return { success: false, error: error.message };
     }
 
+    // Varsayılan çalışma takvimi ekle: Pazartesi(1) - Cumartesi(6), 09:00-18:00
+    const defaultSchedules = [1, 2, 3, 4, 5, 6].map(day => ({
+        organization_id: user.organization_id,
+        user_id: newStaff.id,
+        day_of_week: day,
+        start_time: '09:00:00',
+        end_time: '18:00:00',
+        is_working_day: true,
+    }))
+    await supabase.from('staff_schedules').insert(defaultSchedules)
+
     revalidatePath('/settings');
     return { success: true, data: newStaff };
 }
@@ -75,11 +79,7 @@ export async function updateStaff(id: string, data: { full_name: string, role: s
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = supabaseAdmin;
 
     const { error } = await supabase
         .from('users')
@@ -99,11 +99,7 @@ export async function deleteStaff(id: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = supabaseAdmin;
 
     // Soft delete or Hard delete?
     // Hard delete for now, but check if appointments exist.

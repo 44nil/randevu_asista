@@ -266,9 +266,16 @@ export function AppointmentForm({ onSuccess, defaultDate, staffId, formId = "app
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent className="bg-white border-border-brand/30 shadow-elevated">
-                                        {staffList.map(staff => (
-                                            <SelectItem key={staff.id} value={staff.id} className="font-medium">{staff.full_name}</SelectItem>
-                                        ))}
+                                        {staffList.length === 0 ? (
+                                            <div className="px-3 py-4 text-sm text-slate-400 text-center">
+                                                Henüz {config.labels.instructor?.toLowerCase()} eklenmemiş.<br />
+                                                <span className="text-xs">Ayarlar → Ekip bölümünden ekleyin.</span>
+                                            </div>
+                                        ) : (
+                                            staffList.map(staff => (
+                                                <SelectItem key={staff.id} value={staff.id} className="font-medium">{staff.full_name}</SelectItem>
+                                            ))
+                                        )}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
