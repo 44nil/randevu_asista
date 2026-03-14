@@ -31,44 +31,17 @@ const baseSchema = z.object({
     email: z.string().email({
         message: "Geçerli bir email adresi giriniz.",
     }).optional().or(z.literal("")),
-})
-
-// Industry specific schemas
-const pilatesSchema = baseSchema.extend({
-    industry_type: z.literal("pilates"),
+    industry_type: z.string().optional(),
     metadata: z.object({
         health_notes: z.string().optional(),
-    }),
-})
-
-const dentalSchema = baseSchema.extend({
-    industry_type: z.literal("dental"),
-    metadata: z.object({
         blood_type: z.string().optional(),
         chronic_diseases: z.string().optional(),
-    }),
-})
-
-const hairSchema = baseSchema.extend({
-    industry_type: z.literal("hair"),
-    metadata: z.object({
         hair_type: z.string().optional(),
         color_code: z.string().optional(),
-    }),
+    }).optional(),
 })
 
-const generalSchema = baseSchema.extend({
-    industry_type: z.literal("general"),
-    metadata: z.object({}).optional(),
-})
-
-// Discriminated Union
-const customerFormSchema = z.discriminatedUnion("industry_type", [
-    pilatesSchema,
-    dentalSchema,
-    hairSchema,
-    generalSchema,
-])
+const customerFormSchema = baseSchema
 
 type CustomerFormValues = z.infer<typeof customerFormSchema>
 

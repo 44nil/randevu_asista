@@ -1,16 +1,13 @@
 'use server'
 
 import { getSession } from "@/app/actions";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function getCustomersWithStats() {
     const { userId } = await getSession();
     if (!userId) return { success: false, data: [], error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = supabaseAdmin;
 
     const { data: userData } = await supabase
         .from('users')
@@ -106,11 +103,7 @@ export async function upsertTreatmentPlanItem(customerId: string, item: {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = supabaseAdmin;
 
     const { data: customer } = await supabase
         .from('customers')
@@ -140,11 +133,7 @@ export async function deleteTreatmentPlanItem(customerId: string, itemId: string
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = supabaseAdmin;
 
     const { data: customer } = await supabase
         .from('customers')
@@ -167,11 +156,7 @@ export async function getCustomerDetail(customerId: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = supabaseAdmin;
 
     const { data: userData } = await supabase
         .from('users')
@@ -247,11 +232,7 @@ export async function getMemberPageStats() {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = supabaseAdmin;
 
     const { data: userData } = await supabase
         .from('users')
