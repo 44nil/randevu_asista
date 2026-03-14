@@ -2,16 +2,13 @@
 
 import { getSession } from "./actions"
 import { revalidatePath } from "next/cache"
+import { supabaseAdmin } from "@/lib/supabaseAdmin"
 
 export async function getUserProfile() {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = supabaseAdmin;
 
     // Get User Data
     const { data: user, error } = await supabase
@@ -54,12 +51,7 @@ export async function getUserProfile() {
 export async function updateUserProfile(data: { full_name: string, phone?: string, avatar_url?: string, birth_date?: string, medical_notes?: string, notification_preferences?: any }) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = supabaseAdmin;
 
     // 1. Update Users Table
     const { error: userError } = await supabase

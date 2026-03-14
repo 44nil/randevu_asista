@@ -244,23 +244,45 @@ export async function getMemberPageStats() {
     if (!orgId) return { success: false, error: "No org" };
 
     // 1. Total Active Members (Unique customers with appointments in last 30 days OR active package)
-    // For simplicity: Just total customers count
-    const { count: totalMembers } = await supabase.from('customers').select('*', { count: 'exact', head: true }).eq('organization_id', orgId);
+    // 1. Total customers
+    const { count: totalMembers } = await supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', orgId);
 
-    // 2. Expired Packages (Logically calculated, but here maybe mocked or simple query)
-    // Hard to do strictly in SQL without complex logic. We'll return global counts.
+    // 2. Expired packages (end_date geçmiş, status='active')
+    const today = new Date().toISOString();
+    const { count: expiredPackages } = await supabase
+        .from('customer_packages')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', orgId)
+        .eq('status', 'active')
+        .lt('end_date', today);
 
-    // 3. Monthly Revenue
+    // 3. Low balance (kalan seans <= 2, status='active')
+    const { count: lowBalance } = await supabase
+        .from('customer_packages')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', orgId)
+        .eq('status', 'active')
+        .lte('remaining_sessions', 2)
+        .gt('remaining_sessions', 0);
+
+    // 4. Monthly Revenue
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const { data: sales } = await supabase.from('sales').select('amount').eq('organization_id', orgId).gte('sale_date', startOfMonth);
+    const { data: sales } = await supabase
+        .from('sales')
+        .select('amount')
+        .eq('organization_id', orgId)
+        .gte('sale_date', startOfMonth);
     const monthlyRevenue = sales?.reduce((sum, s) => sum + Number(s.amount), 0) || 0;
 
     return {
         success: true,
         data: {
             totalMembers: totalMembers || 0,
-            expiredPackages: 5, // Mocked for now as we don't have easy expiry logic in DB
-            lowBalance: 8, // Mocked
+            expiredPackages: expiredPackages || 0,
+            lowBalance: lowBalance || 0,
             monthlyRevenue: monthlyRevenue
         }
     }

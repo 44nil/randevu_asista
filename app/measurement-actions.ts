@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { getSession } from "./actions"
+import { supabaseAdmin } from "@/lib/supabaseAdmin"
 
 export async function addMeasurement(data: {
     customer_id: string,
@@ -19,13 +20,7 @@ export async function addMeasurement(data: {
 }) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
+    const supabase = supabaseAdmin;
 
     const { data: userData } = await supabase
         .from('users')
@@ -58,13 +53,7 @@ export async function addMeasurement(data: {
 export async function getMeasurements(customerId: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
+    const supabase = supabaseAdmin;
 
     const { data, error } = await supabase
         .from('measurements')
@@ -82,13 +71,7 @@ export async function getMeasurements(customerId: string) {
 export async function deleteMeasurement(id: string) {
     const { userId } = await getSession();
     if (!userId) return { success: false, error: "Unauthorized" };
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
+    const supabase = supabaseAdmin;
 
     const { error } = await supabase
         .from('measurements')
