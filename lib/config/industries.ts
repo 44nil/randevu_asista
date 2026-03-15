@@ -11,6 +11,7 @@ export interface IndustryConfig {
         package: string; // e.g. "Paket", "Hizmet"
         session: string; // e.g. "Seans", "Randevu Hakkı"
         instructor: string; // e.g. "Eğitmen", "Hekim", "Uzman"
+        service?: string; // e.g. "Hizmet", "Tedavi"
     };
     appointmentTypes: { value: string; label: string }[];
     packageTypes: { value: string; label: string; booking_type?: 'individual' | 'group' }[];

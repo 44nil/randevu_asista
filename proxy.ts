@@ -1,14 +1,21 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-// Define public routes (e.g., sign-in, sign-up, webhook)
-const isPublicRoute = createRouteMatcher([
-    '/sign-in(.*)',
-    '/sign-up(.*)',
-    '/api/webhooks(.*)'
+// Define protected admin routes (everything else is public for booking)
+const isProtectedRoute = createRouteMatcher([
+    '/customers(.*)',
+    '/packages(.*)',
+    '/reservations(.*)',
+    '/history(.*)',
+    '/profile(.*)',
+    '/settings(.*)',
+    '/reports(.*)', 
+    '/onboarding(.*)',
+    '/dev(.*)',
+    '/' // Dashboard home
 ])
 
 export default clerkMiddleware(async (auth, request) => {
-    if (!isPublicRoute(request)) {
+    if (isProtectedRoute(request)) {
         await auth.protect()
     }
 })
